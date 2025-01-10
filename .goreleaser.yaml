@@ -1,3 +1,6 @@
+version: 1
+
+
 project_name: dhcp-adguard-sync
 
 before:

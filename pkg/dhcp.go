@@ -12,8 +12,8 @@ type DHCP struct {
 	path string
 }
 
-// Lease represents a DHCP lease entry
-type Lease struct {
+// DHCPLease represents a DHCP lease entry
+type DHCPLease struct {
 	IP       string
 	Hostname string
 	MAC      string
@@ -28,17 +28,17 @@ func (d *DHCP) Path() string {
 	return d.path
 }
 
-func (d *DHCP) GetLeases() (map[string]Lease, error) {
+func (d *DHCP) GetLeases() (map[string]DHCPLease, error) {
 	file, err := os.Open(d.path)
 	if err != nil {
 		return nil, fmt.Errorf("opening lease file: %w", err)
 	}
 	defer file.Close()
 
-	leases := make(map[string]Lease)
+	leases := make(map[string]DHCPLease)
 	scanner := bufio.NewScanner(file)
 
-	var currentLease Lease
+	var currentLease DHCPLease
 	var inLeaseBlock bool
 
 	for scanner.Scan() {
@@ -58,7 +58,7 @@ func (d *DHCP) GetLeases() (map[string]Lease, error) {
 				// Store lease by MAC address for easier lookup
 				leases[currentLease.MAC] = currentLease
 			}
-			currentLease = Lease{} // Reset for next lease
+			currentLease = DHCPLease{} // Reset for next lease
 		} else if inLeaseBlock {
 			// Parse details within the lease block
 			if strings.HasPrefix(line, "binding state active") {

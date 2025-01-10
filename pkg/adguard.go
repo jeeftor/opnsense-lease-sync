@@ -1,114 +1,153 @@
+// pkg/adguard.go
 package pkg
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 )
 
-// AdGuard represents the AdGuard Home API client
 type AdGuard struct {
-	baseURL string
+	BaseURL    string
+	authHeader string
 }
 
-// AdGuardClient represents a client in AdGuard Home
 type AdGuardClient struct {
-	Name              string   `json:"name"`
-	IDs               []string `json:"ids"` // MAC addresses
-	IP                string   `json:"ip"`
-	UseGlobalSettings bool     `json:"use_global_settings"`
+	Name                string   `json:"name"`
+	IDs                 []string `json:"ids"`
+	IP                  string   `json:"ip"`
+	UseGlobalSettings   bool     `json:"use_global_settings"`
+	FilteringEnabled    bool     `json:"filtering_enabled"`
+	ParentalEnabled     bool     `json:"parental_enabled"`
+	SafebrowsingEnabled bool     `json:"safebrowsing_enabled"`
+	SafeSearch          bool     `json:"safe_search"`
 }
 
-func NewAdGuard(baseURL string) *AdGuard {
-	return &AdGuard{baseURL: baseURL}
+type AdGuardResponse struct {
+	Clients     []AdGuardClient `json:"clients"`
+	AutoClients []AutoClient    `json:"auto_clients"`
 }
 
-func (c *AdGuard) GetClients() ([]AdGuardClient, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/control/clients", c.baseURL))
+type AutoClient struct {
+	WhoisInfo map[string]string `json:"whois_info"`
+	IP        string            `json:"ip"`
+	Name      string            `json:"name"`
+	Source    string            `json:"source"`
+}
+
+func NewAdGuard(baseURL string, b64auth string) *AdGuard {
+	return &AdGuard{
+		BaseURL:    baseURL,
+		authHeader: fmt.Sprintf("Basic %s", b64auth),
+	}
+}
+
+func (a *AdGuard) makeRequest(method, path string, body interface{}) (*http.Response, error) {
+	url := fmt.Sprintf("%s%s", a.BaseURL, path)
+
+	var bodyReader io.Reader
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling request body: %w", err)
+		}
+		bodyReader = bytes.NewBuffer(jsonBody)
+	}
+
+	req, err := http.NewRequest(method, url, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	if a.authHeader != "" {
+		req.Header.Add("Authorization", a.authHeader)
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("executing request: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return resp, nil
+}
+
+func (a *AdGuard) GetClients() ([]AdGuardClient, error) {
+	resp, err := a.makeRequest(http.MethodGet, "/control/clients", nil)
 	if err != nil {
 		return nil, fmt.Errorf("getting clients: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get clients: status %d", resp.StatusCode)
-	}
-
-	var clients []AdGuardClient
-	if err := json.NewDecoder(resp.Body).Decode(&clients); err != nil {
+	var response AdGuardResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("decoding response: %w", err)
 	}
 
-	return clients, nil
+	// If clients is nil, initialize empty slice
+	if response.Clients == nil {
+		response.Clients = []AdGuardClient{}
+	}
+
+	return response.Clients, nil
 }
 
-func (c *AdGuard) UpdateClient(name, ip, mac string) error {
+func (a *AdGuard) UpdateClient(name, ip, mac string, existingClient *AdGuardClient) error {
 	client := AdGuardClient{
-		Name:              name,
-		IDs:               []string{mac},
-		IP:                ip,
-		UseGlobalSettings: true,
+		Name: name,
+		IDs:  []string{mac},
+		IP:   ip,
+		// Preserve existing settings
+		UseGlobalSettings:   existingClient.UseGlobalSettings,
+		FilteringEnabled:    existingClient.FilteringEnabled,
+		ParentalEnabled:     existingClient.ParentalEnabled,
+		SafebrowsingEnabled: existingClient.SafebrowsingEnabled,
+		SafeSearch:          existingClient.SafeSearch,
 	}
 
-	jsonData, err := json.Marshal(client)
+	_, err := a.makeRequest(http.MethodPut, "/control/clients/update", client)
 	if err != nil {
-		return fmt.Errorf("marshal JSON: %w", err)
+		return fmt.Errorf("updating client: %w", err)
 	}
-
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/control/clients", c.baseURL), bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("sending request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to update client: status %d", resp.StatusCode)
-	}
-
 	return nil
 }
 
-func (c *AdGuard) RemoveClient(clientID string) error {
-	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/control/clients/%s", c.baseURL, clientID), nil)
+func (a *AdGuard) AddClient(name, ip, mac string) error {
+	client := AdGuardClient{
+		Name:                name,
+		IDs:                 []string{mac},
+		IP:                  ip,
+		UseGlobalSettings:   true,
+		FilteringEnabled:    true,
+		ParentalEnabled:     false,
+		SafebrowsingEnabled: false,
+		SafeSearch:          false,
+	}
+
+	_, err := a.makeRequest(http.MethodPost, "/control/clients/add", client)
 	if err != nil {
-		return fmt.Errorf("creating delete request: %w", err)
+		return fmt.Errorf("adding client: %w", err)
 	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("sending delete request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to remove client: status %d", resp.StatusCode)
-	}
-
 	return nil
 }
 
-func (c *AdGuard) FindClientByMAC(mac string) (*AdGuardClient, error) {
-	clients, err := c.GetClients()
+func (a *AdGuard) RemoveClient(mac string) error {
+	params := url.Values{}
+	params.Add("mac", mac)
+
+	_, err := a.makeRequest(http.MethodDelete, "/control/clients/delete?"+params.Encode(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("getting clients: %w", err)
+		return fmt.Errorf("removing client: %w", err)
 	}
-
-	for _, client := range clients {
-		for _, id := range client.IDs {
-			if id == mac {
-				clientCopy := client // Create copy to avoid pointer to loop variable
-				return &clientCopy, nil
-			}
-		}
-	}
-
-	return nil, nil // Not found but not an error
+	return nil
 }

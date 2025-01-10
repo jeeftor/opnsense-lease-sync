@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	b64auth    string
 	adguardURL string
 	leasePath  string
 	dryRun     bool
@@ -33,8 +34,8 @@ func Execute() {
 }
 
 func init() {
-	// Global flags
-	rootCmd.PersistentFlags().StringVar(&adguardURL, "adguard", "http://localhost:3000", "AdGuard Home API URL")
-	rootCmd.PersistentFlags().StringVar(&leasePath, "lease-file", "/var/dhcpd/var/db/dhcpd.leases", "Path to DHCP lease file")
-	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Print changes that would be made without actually making them")
+	rootCmd.PersistentFlags().StringVar(&b64auth, "b64auth", "", "Base64 encoded credentials for AdGuard Home API (username:password)")
+	rootCmd.PersistentFlags().StringVar(&adguardURL, "adguard-url", "", "AdGuard Home URL")
+	rootCmd.PersistentFlags().StringVar(&leasePath, "lease-path", "", "Path to DHCP leases file")
+	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Dry run mode")
 }

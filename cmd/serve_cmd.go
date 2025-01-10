@@ -27,6 +27,7 @@ mode for production use.`,
 			AdGuardURL: adguardURL,
 			LeasePath:  leasePath,
 			DryRun:     dryRun,
+			B64Auth:    b64auth,
 			Logger:     logger,
 		})
 		if err != nil {

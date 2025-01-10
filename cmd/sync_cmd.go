@@ -23,6 +23,7 @@ and then exits. This is useful for testing or manual synchronization.`,
 			AdGuardURL: adguardURL,
 			LeasePath:  leasePath,
 			DryRun:     dryRun,
+			B64Auth:    b64auth,
 			Logger:     logger,
 		})
 		if err != nil {

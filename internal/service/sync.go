@@ -33,50 +33,74 @@ func New(adguardURL, leasePath string, logger logger.Logger) (*SyncService, erro
 	}, nil
 }
 
-func (s *SyncService) syncLeases(currentLeases, previousLeases map[string]dhcp.Lease) error {
-	// Check for new or updated leases
-	for mac, lease := range currentLeases {
-		prev, exists := previousLeases[mac]
-		if !exists || prev.IP != lease.IP || prev.Hostname != lease.Hostname {
+// initialSync gets the current state from both AdGuard and the lease file
+// and performs a full sync
+func (s *SyncService) initialSync() error {
+	s.logger.Info("Performing initial sync")
+
+	// Get current AdGuard clients
+	adguardClients, err := s.adguardClient.GetClients()
+	if err != nil {
+		return fmt.Errorf("getting AdGuard clients: %w", err)
+	}
+
+	// Create a map of MAC -> Client for easy lookup
+	currentAdGuardClients := make(map[string]adguard.Client)
+	for _, client := range adguardClients {
+		// Assuming the first ID is the MAC address
+		if len(client.IDs) > 0 {
+			currentAdGuardClients[client.IDs[0]] = client
+		}
+	}
+
+	// Get current DHCP leases
+	dhcpLeases, err := dhcp.ParseLeaseFile(s.leasePath)
+	if err != nil {
+		return fmt.Errorf("parsing lease file: %w", err)
+	}
+
+	// Sync the states
+	for mac, lease := range dhcpLeases {
+		// Check if lease exists in AdGuard
+		if adguardClient, exists := currentAdGuardClients[mac]; exists {
+			// Update if different
+			if adguardClient.Name != lease.Hostname || adguardClient.IP != lease.IP {
+				if err := s.adguardClient.UpdateClient(lease.Hostname, lease.IP, lease.MAC); err != nil {
+					s.logger.Error(fmt.Sprintf("Error updating lease in AdGuard: %v", err))
+				}
+			}
+			// Remove from map to track what's been processed
+			delete(currentAdGuardClients, mac)
+		} else {
+			// Add new lease to AdGuard
 			if err := s.adguardClient.UpdateClient(lease.Hostname, lease.IP, lease.MAC); err != nil {
-				s.logger.Error(fmt.Sprintf("Error updating lease in AdGuard: %v", err))
+				s.logger.Error(fmt.Sprintf("Error adding lease to AdGuard: %v", err))
 			}
 		}
 	}
 
-	// Check for expired leases
-	for mac, lease := range previousLeases {
-		if _, exists := currentLeases[mac]; !exists {
-			if err := s.adguardClient.RemoveClient(lease.MAC); err != nil {
-				s.logger.Error(fmt.Sprintf("Error removing lease from AdGuard: %v", err))
-			}
+	// Remove any AdGuard clients that don't have active DHCP leases
+	for mac := range currentAdGuardClients {
+		if err := s.adguardClient.RemoveClient(mac); err != nil {
+			s.logger.Error(fmt.Sprintf("Error removing client from AdGuard: %v", err))
 		}
 	}
 
 	return nil
 }
 
-func (s *SyncService) processLeaseFile() (map[string]dhcp.Lease, error) {
-	currentLeases, err := dhcp.ParseLeaseFile(s.leasePath)
-	if err != nil {
-		return nil, fmt.Errorf("parsing lease file: %w", err)
-	}
-	return currentLeases, nil
-}
-
 func (s *SyncService) Run() error {
 	s.logger.Info("DHCP to AdGuard Home sync service starting")
+
+	// Perform initial sync
+	if err := s.initialSync(); err != nil {
+		s.logger.Error(fmt.Sprintf("Initial sync failed: %v", err))
+	}
 
 	// Watch the directory containing the lease file
 	leaseDir := filepath.Dir(s.leasePath)
 	if err := s.watcher.Add(leaseDir); err != nil {
 		return fmt.Errorf("watching lease directory: %w", err)
-	}
-
-	// Initial read of leases
-	previousLeases, err := s.processLeaseFile()
-	if err != nil {
-		s.logger.Error(fmt.Sprintf("Initial lease file read failed: %v", err))
 	}
 
 	// Debounce timer to prevent multiple rapid updates
@@ -101,20 +125,10 @@ func (s *SyncService) Run() error {
 					debounceTimer.Stop()
 				}
 				debounceTimer = time.AfterFunc(debounceDelay, func() {
-					s.logger.Info("Lease file changed, processing updates")
-
-					currentLeases, err := s.processLeaseFile()
-					if err != nil {
-						s.logger.Error(fmt.Sprintf("Failed to process lease file: %v", err))
-						return
+					// On file change, just do a full sync again
+					if err := s.initialSync(); err != nil {
+						s.logger.Error(fmt.Sprintf("Sync after file change failed: %v", err))
 					}
-
-					if err := s.syncLeases(currentLeases, previousLeases); err != nil {
-						s.logger.Error(fmt.Sprintf("Failed to sync leases: %v", err))
-						return
-					}
-
-					previousLeases = currentLeases
 				})
 
 			case err, ok := <-s.watcher.Errors:

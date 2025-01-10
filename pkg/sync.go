@@ -9,7 +9,7 @@ import (
 )
 
 type SyncService struct {
-	adguard *AdGuard // Changed from *AdGuardClient to *AdGuard
+	adguard *AdGuard
 	leases  *DHCP
 	logger  Logger
 	watcher *fsnotify.Watcher
@@ -40,7 +40,7 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 	}, nil
 }
 
-func (s *SyncService) sync() error {
+func (s *SyncService) Sync() error {
 	s.logger.Info("Starting sync")
 
 	clients, err := s.adguard.GetClients()
@@ -116,7 +116,7 @@ func (s *SyncService) Run() error {
 	s.logger.Info("Starting DHCP to AdGuard Home sync service")
 
 	// Initial sync
-	if err := s.sync(); err != nil {
+	if err := s.Sync(); err != nil {
 		s.logger.Error(fmt.Sprintf("Initial sync failed: %v", err))
 	}
 
@@ -145,7 +145,7 @@ func (s *SyncService) Run() error {
 					debounceTimer.Stop()
 				}
 				debounceTimer = time.AfterFunc(debounceDelay, func() {
-					if err := s.sync(); err != nil {
+					if err := s.Sync(); err != nil {
 						s.logger.Error(fmt.Sprintf("Sync after file change failed: %v", err))
 					}
 				})

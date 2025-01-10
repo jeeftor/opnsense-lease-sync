@@ -7,22 +7,22 @@ before:
     - go mod tidy
 
 builds:
-  - id: opnsense
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - freebsd
-    goarch:
-      - amd64
-    binary: dhcp-adguard-sync
-    dir: cmd/dhcp-adguard-sync
-    flags: ["-trimpath"]
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-    output: opnsense-plugin/src/usr/local/sbin/{{ .ProjectName }}
+#  - id: opnsense
+#    env:
+#      - CGO_ENABLED=0
+#    goos:
+#      - freebsd
+#    goarch:
+#      - amd64
+#    binary: dhcp-adguard-sync
+#    dir: cmd/dhcp-adguard-sync
+#    flags: ["-trimpath"]
+#    ldflags:
+#      - -s -w
+#      - -X main.version={{.Version}}
+#      - -X main.commit={{.Commit}}
+#      - -X main.date={{.Date}}
+#    output: opnsense-plugin/src/usr/local/sbin/{{ .ProjectName }}
 
   - id: standard
     env:
@@ -100,4 +100,4 @@ changelog:
       - '^chore:'
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"

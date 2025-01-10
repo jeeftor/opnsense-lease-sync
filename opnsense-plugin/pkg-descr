@@ -1,0 +1,8 @@
+This plugin synchronizes ISC DHCP leases with AdGuard Home clients,
+allowing automatic client identification in AdGuard Home based on
+DHCP leases.
+
+Plugin Features:
+* Automatic sync of DHCP leases to AdGuard Home
+* Web UI for configuration
+* Service management through OPNsense

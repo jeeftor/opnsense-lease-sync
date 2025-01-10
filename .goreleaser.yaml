@@ -5,7 +5,25 @@ before:
     - go mod tidy
 
 builds:
-  - env:
+  # OPNsense specific build
+  - id: opnsense
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - freebsd
+    goarch:
+      - amd64  # OPNsense typically runs on amd64
+    binary: dhcp-adguard-sync
+    dir: cmd/dhcp-adguard-sync
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    output: opnsense-plugin/src/usr/local/sbin/{{ .ProjectName }}
+
+  # Standard builds for other platforms
+  - id: standard
+    env:
       - CGO_ENABLED=0
     goos:
       - freebsd
@@ -21,9 +39,38 @@ builds:
       - -trimpath
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    ignore:
+      - goos: freebsd
+        goarch: amd64  # Skip FreeBSD amd64 as it's built in opnsense build
+
+archives:
+  - id: opnsense
+    builds: [opnsense]
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_opnsense_{{ .Version }}
+    files:
+      - opnsense-plugin/**/*
+      - README*
+      - LICENSE*
+
+  - id: standard
+    builds: [standard]
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}aarch64
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - README*
+      - LICENSE*
 
 nfpms:
-  - vendor: Your Name
+  - id: standard
+    builds: [standard]
+    vendor: Your Name
     homepage: https://github.com/yourusername/dhcp-adguard-sync
     maintainer: Your Name <your.email@example.com>
     description: Sync DHCP leases to AdGuard Home
@@ -39,18 +86,6 @@ nfpms:
     scripts:
       postinstall: ./scripts/postinstall.sh
       preremove: ./scripts/preremove.sh
-
-archives:
-  - format: tar.gz
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "arm64" }}aarch64
-      {{- else }}{{ .Arch }}{{ end }}
-    files:
-      - README*
-      - LICENSE*
 
 checksum:
   name_template: 'checksums.txt'

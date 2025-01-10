@@ -1,6 +1,5 @@
 version: 2
 
-
 project_name: dhcp-adguard-sync
 
 before:
@@ -8,67 +7,63 @@ before:
     - go mod tidy
 
 builds:
-  # OPNsense specific build
   - id: opnsense
     env:
       - CGO_ENABLED=0
     goos:
       - freebsd
     goarch:
-      - amd64  # OPNsense typically runs on amd64
+      - amd64
     binary: dhcp-adguard-sync
     dir: cmd/dhcp-adguard-sync
-    flags:
-      - -trimpath
+    flags: ["-trimpath"]
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
     output: opnsense-plugin/src/usr/local/sbin/{{ .ProjectName }}
 
-  # Standard builds for other platforms
   - id: standard
     env:
       - CGO_ENABLED=0
-    goos:
-      - freebsd
-      - linux
-    goarch:
-      - amd64
-      - arm64
-      - arm
-    goarm:
-      - "6"
-      - "7"
-    flags:
-      - -trimpath
+    goos: [freebsd, linux]
+    goarch: [amd64, arm64, arm]
+    goarm: ["6", "7"]
+    flags: ["-trimpath"]
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
     ignore:
       - goos: freebsd
-        goarch: amd64  # Skip FreeBSD amd64 as it's built in opnsense build
+        goarch: amd64
 
 archives:
   - id: opnsense
     builds: [opnsense]
+    name_template: '{{ .ProjectName }}_opnsense_{{ .Version }}'
     format: tar.gz
-    name_template: >-
-      {{ .ProjectName }}_opnsense_{{ .Version }}
     files:
-      - opnsense-plugin/**/*
-      - README*
-      - LICENSE*
+      - src: 'opnsense-plugin/**/*'
+      - src: 'README*'
+      - src: 'LICENSE*'
+    rlcp: true
 
   - id: standard
     builds: [standard]
-    format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "arm64" }}aarch64
       {{- else }}{{ .Arch }}{{ end }}
+    format: tar.gz
     files:
-      - README*
-      - LICENSE*
+      - src: 'README*'
+      - src: 'LICENSE*'
+    rlcp: true
 
 nfpms:
   - id: standard
@@ -76,30 +71,46 @@ nfpms:
     vendor: Your Name
     homepage: https://github.com/yourusername/dhcp-adguard-sync
     maintainer: Your Name <your.email@example.com>
-    description: Sync DHCP leases to AdGuard Home
+    description: |
+      Sync DHCP leases to AdGuard Home
     license: MIT
-    formats:
-      - deb
-      - freebsd
-    bindir: /usr/local/bin
+    formats: [deb, freebsd]
     contents:
       - src: ./scripts/dhcp-adguard-sync.service
         dst: /etc/systemd/system/dhcp-adguard-sync.service
         type: config
+        file_info:
+          mode: 0644
     scripts:
       postinstall: ./scripts/postinstall.sh
       preremove: ./scripts/preremove.sh
+    release: 1
+    section: net
+    priority: optional
 
 checksum:
   name_template: 'checksums.txt'
+  algorithm: sha256
 
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    args:
+      - sign-blob
+      - --key=env://COSIGN_PRIVATE_KEY
+      - --output=${signature}
+      - ${artifact}
+    env:
+      - COSIGN_PASSWORD
 
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
       - '^docs:'
       - '^test:'
       - '^chore:'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"

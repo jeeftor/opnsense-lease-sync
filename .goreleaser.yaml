@@ -46,10 +46,9 @@ archives:
     name_template: '{{ .ProjectName }}_opnsense_{{ .Version }}'
     format: tar.gz
     files:
-      - src: 'opnsense-plugin/**/*'
-      - src: 'README*'
-      - src: 'LICENSE*'
-    rlcp: true
+      - opnsense-plugin/**/*
+      - README*
+      - LICENSE*
 
   - id: standard
     builds: [standard]
@@ -61,9 +60,8 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
     format: tar.gz
     files:
-      - src: 'README*'
-      - src: 'LICENSE*'
-    rlcp: true
+      - README*
+      - LICENSE*
 
 nfpms:
   - id: standard
@@ -91,17 +89,6 @@ nfpms:
 checksum:
   name_template: 'checksums.txt'
   algorithm: sha256
-
-signs:
-  - cmd: cosign
-    artifacts: checksum
-    args:
-      - sign-blob
-      - --key=env://COSIGN_PRIVATE_KEY
-      - --output=${signature}
-      - ${artifact}
-    env:
-      - COSIGN_PASSWORD
 
 changelog:
   sort: asc

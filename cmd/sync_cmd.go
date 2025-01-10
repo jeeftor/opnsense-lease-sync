@@ -1,3 +1,4 @@
+// cmd/sync.go
 package cmd
 
 import (
@@ -23,7 +24,10 @@ and then exits. This is useful for testing or manual synchronization.`,
 			AdGuardURL: adguardURL,
 			LeasePath:  leasePath,
 			DryRun:     dryRun,
-			B64Auth:    b64auth,
+			Username:   username,
+			Password:   password,
+			Scheme:     scheme,
+			Timeout:    timeout,
 			Logger:     logger,
 		})
 		if err != nil {

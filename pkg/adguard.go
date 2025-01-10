@@ -2,152 +2,134 @@
 package pkg
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
+	"github.com/gmichels/adguard-client-go"
+	"strings"
 )
 
 type AdGuard struct {
-	BaseURL    string
-	authHeader string
+	client *adguard.ADG
 }
 
-type AdGuardClient struct {
-	Name                string   `json:"name"`
-	IDs                 []string `json:"ids"`
-	IP                  string   `json:"ip"`
-	UseGlobalSettings   bool     `json:"use_global_settings"`
-	FilteringEnabled    bool     `json:"filtering_enabled"`
-	ParentalEnabled     bool     `json:"parental_enabled"`
-	SafebrowsingEnabled bool     `json:"safebrowsing_enabled"`
-	SafeSearch          bool     `json:"safe_search"`
-}
+func NewAdGuard(cfg Config) (*AdGuard, error) {
+	// Set defaults if not provided
+	scheme := "http" // Since AdGuard is running locally on OPNsense
+	if cfg.Scheme != "" {
+		scheme = cfg.Scheme
+	}
 
-type AdGuardResponse struct {
-	Clients     []AdGuardClient `json:"clients"`
-	AutoClients []AutoClient    `json:"auto_clients"`
-}
+	timeout := 10
+	if cfg.Timeout > 0 {
+		timeout = cfg.Timeout
+	}
 
-type AutoClient struct {
-	WhoisInfo map[string]string `json:"whois_info"`
-	IP        string            `json:"ip"`
-	Name      string            `json:"name"`
-	Source    string            `json:"source"`
-}
+	// Extract host from URL (remove scheme if present)
+	host := cfg.AdGuardURL
+	host = strings.TrimPrefix(host, "http://")
+	host = strings.TrimPrefix(host, "https://")
 
-func NewAdGuard(baseURL string, b64auth string) *AdGuard {
+	// Create new AdGuard client
+	client, err := adguard.NewClient(
+		&host,
+		&cfg.Username,
+		&cfg.Password,
+		&scheme,
+		&timeout,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating AdGuard client: %w", err)
+	}
+
 	return &AdGuard{
-		BaseURL:    baseURL,
-		authHeader: fmt.Sprintf("Basic %s", b64auth),
-	}
+		client: client,
+	}, nil
+
 }
 
-func (a *AdGuard) makeRequest(method, path string, body interface{}) (*http.Response, error) {
-	url := fmt.Sprintf("%s%s", a.BaseURL, path)
-
-	var bodyReader io.Reader
-	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		if err != nil {
-			return nil, fmt.Errorf("marshaling request body: %w", err)
-		}
-		bodyReader = bytes.NewBuffer(jsonBody)
-	}
-
-	req, err := http.NewRequest(method, url, bodyReader)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
-	}
-
-	if a.authHeader != "" {
-		req.Header.Add("Authorization", a.authHeader)
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("executing request: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	return resp, nil
-}
-
-func (a *AdGuard) GetClients() ([]AdGuardClient, error) {
-	resp, err := a.makeRequest(http.MethodGet, "/control/clients", nil)
+// GetClients retrieves all clients from AdGuard Home
+func (a *AdGuard) GetClients() ([]adguard.Client, error) {
+	allClients, err := a.client.GetAllClients()
 	if err != nil {
 		return nil, fmt.Errorf("getting clients: %w", err)
 	}
-	defer resp.Body.Close()
-
-	var response AdGuardResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("decoding response: %w", err)
-	}
-
-	// If clients is nil, initialize empty slice
-	if response.Clients == nil {
-		response.Clients = []AdGuardClient{}
-	}
-
-	return response.Clients, nil
+	return allClients.Clients, nil
 }
 
-func (a *AdGuard) UpdateClient(name, ip, mac string, existingClient *AdGuardClient) error {
-	client := AdGuardClient{
-		Name: name,
-		IDs:  []string{mac},
-		IP:   ip,
-		// Preserve existing settings
-		UseGlobalSettings:   existingClient.UseGlobalSettings,
-		FilteringEnabled:    existingClient.FilteringEnabled,
-		ParentalEnabled:     existingClient.ParentalEnabled,
-		SafebrowsingEnabled: existingClient.SafebrowsingEnabled,
-		SafeSearch:          existingClient.SafeSearch,
+// GetClientByMAC finds a client by MAC address from the clients list
+func (a *AdGuard) GetClientByMAC(mac string) (*adguard.Client, error) {
+	allClients, err := a.client.GetAllClients()
+	if err != nil {
+		return nil, err
 	}
 
-	_, err := a.makeRequest(http.MethodPut, "/control/clients/update", client)
+	for _, client := range allClients.Clients {
+		for _, id := range client.Ids {
+			if id == mac {
+				return &client, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+// AddClient creates a new client in AdGuard Home
+func (a *AdGuard) AddClient(name, mac, ip string) error {
+	client := adguard.Client{
+		Name: name,
+		Ids:  []string{mac, ip},
+		// Set sensible defaults for AdGuard Home client
+		UseGlobalSettings:        true,
+		UseGlobalBlockedServices: true,
+		FilteringEnabled:         true,
+		ParentalEnabled:          false,
+		SafebrowsingEnabled:      false,
+
+		SafeSearch: adguard.SafeSearchConfig{
+			Enabled: false,
+		},
+	}
+
+	_, err := a.client.CreateClient(client)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+	return nil
+}
+
+// UpdateClient updates an existing client in AdGuard Home
+func (a *AdGuard) UpdateClient(name, mac, ip string) error {
+	clientUpdate := adguard.ClientUpdate{
+		Name: mac, // Use MAC as identifier
+		Data: adguard.Client{
+			Name:                     name,
+			Ids:                      []string{mac, ip},
+			UseGlobalSettings:        true,
+			UseGlobalBlockedServices: true,
+			FilteringEnabled:         true,
+			ParentalEnabled:          false,
+			SafebrowsingEnabled:      false,
+			SafeSearch: adguard.SafeSearchConfig{
+				Enabled: false,
+			},
+		},
+	}
+
+	_, err := a.client.UpdateClient(clientUpdate)
 	if err != nil {
 		return fmt.Errorf("updating client: %w", err)
 	}
 	return nil
 }
 
-func (a *AdGuard) AddClient(name, ip, mac string) error {
-	client := AdGuardClient{
-		Name:                name,
-		IDs:                 []string{mac},
-		IP:                  ip,
-		UseGlobalSettings:   true,
-		FilteringEnabled:    true,
-		ParentalEnabled:     false,
-		SafebrowsingEnabled: false,
-		SafeSearch:          false,
-	}
-
-	_, err := a.makeRequest(http.MethodPost, "/control/clients/add", client)
-	if err != nil {
-		return fmt.Errorf("adding client: %w", err)
-	}
-	return nil
-}
-
+// RemoveClient removes a client from AdGuard Home
 func (a *AdGuard) RemoveClient(mac string) error {
-	params := url.Values{}
-	params.Add("mac", mac)
+	clientDelete := adguard.ClientDelete{
+		Name: mac,
+	}
 
-	_, err := a.makeRequest(http.MethodDelete, "/control/clients/delete?"+params.Encode(), nil)
+	err := a.client.DeleteClient(clientDelete)
 	if err != nil {
-		return fmt.Errorf("removing client: %w", err)
+		return fmt.Errorf("deleting client: %w", err)
 	}
 	return nil
 }

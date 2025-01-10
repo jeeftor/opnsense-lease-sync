@@ -15,7 +15,9 @@ type ServiceLogger struct {
 	syslog *syslog.Writer
 }
 
-type CLILogger struct{}
+type CLILogger struct {
+	logger *log.Logger
+}
 
 func NewLogger() (Logger, error) {
 	if os.Getppid() == 1 {
@@ -25,8 +27,10 @@ func NewLogger() (Logger, error) {
 		}
 		return &ServiceLogger{syslog: syslogWriter}, nil
 	}
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	return &CLILogger{}, nil
+
+	logger := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+	logger.SetFlags(log.LstdFlags | log.Lshortfile)
+	return &CLILogger{logger: logger}, nil
 }
 
 func (l *ServiceLogger) Info(msg string) {
@@ -38,9 +42,11 @@ func (l *ServiceLogger) Error(msg string) {
 }
 
 func (l *CLILogger) Info(msg string) {
-	log.Printf("INFO: %s\n", msg)
+	// Skip 2 frames in the call stack to show the actual caller
+	l.logger.Output(2, "INFO: "+msg)
 }
 
 func (l *CLILogger) Error(msg string) {
-	log.Printf("ERROR: %s\n", msg)
+	// Skip 2 frames in the call stack to show the actual caller
+	l.logger.Output(2, "ERROR: "+msg)
 }

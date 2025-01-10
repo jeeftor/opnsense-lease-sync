@@ -1,3 +1,4 @@
+// cmd/root.go
 package cmd
 
 import (
@@ -8,10 +9,13 @@ import (
 )
 
 var (
-	b64auth    string
+	username   string
+	password   string
 	adguardURL string
 	leasePath  string
 	dryRun     bool
+	scheme     string
+	timeout    int
 )
 
 // rootCmd represents the base command
@@ -23,9 +27,36 @@ to AdGuard Home, keeping client configurations in sync automatically.
 
 Can be run either as a one-time sync (CLI mode) or as a persistent service
 that watches for lease file changes.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Check for environment variables
+		if envUser := os.Getenv("ADGUARD_USERNAME"); envUser != "" && !cmd.Flags().Changed("username") {
+			username = envUser
+		}
+		if envPass := os.Getenv("ADGUARD_PASSWORD"); envPass != "" && !cmd.Flags().Changed("password") {
+			password = envPass
+		}
+		if envURL := os.Getenv("ADGUARD_URL"); envURL != "" && !cmd.Flags().Changed("adguard-url") {
+			adguardURL = envURL
+		}
+		if envLease := os.Getenv("DHCP_LEASE_PATH"); envLease != "" && !cmd.Flags().Changed("lease-path") {
+			leasePath = envLease
+		}
+		if envScheme := os.Getenv("ADGUARD_SCHEME"); envScheme != "" && !cmd.Flags().Changed("scheme") {
+			scheme = envScheme
+		}
+
+		// Validate required flags
+		if username == "" {
+			return fmt.Errorf("username is required. Set via --username flag or ADGUARD_USERNAME environment variable")
+		}
+		if password == "" {
+			return fmt.Errorf("password is required. Set via --password flag or ADGUARD_PASSWORD environment variable")
+		}
+
+		return nil
+	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -34,8 +65,16 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&b64auth, "b64auth", "", "Base64 encoded credentials for AdGuard Home API (username:password)")
-	rootCmd.PersistentFlags().StringVar(&adguardURL, "adguard-url", "", "AdGuard Home URL")
-	rootCmd.PersistentFlags().StringVar(&leasePath, "lease-path", "", "Path to DHCP leases file")
+	// Define flags with defaults and mark required flags
+	rootCmd.PersistentFlags().StringVar(&username, "username", "", "AdGuard Home username")
+	rootCmd.PersistentFlags().StringVar(&password, "password", "", "AdGuard Home password")
+	rootCmd.PersistentFlags().StringVar(&adguardURL, "adguard-url", "127.0.0.1:3000", "AdGuard Home host:port")
+	rootCmd.PersistentFlags().StringVar(&leasePath, "lease-path", "/var/dhcpd/var/db/dhcpd.leases", "Path to DHCP leases file")
+	rootCmd.PersistentFlags().StringVar(&scheme, "scheme", "http", "Connection scheme (http/https)")
+	rootCmd.PersistentFlags().IntVar(&timeout, "timeout", 10, "API timeout in seconds")
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Dry run mode")
+
+	// Mark required flags
+	rootCmd.MarkPersistentFlagRequired("username")
+	rootCmd.MarkPersistentFlagRequired("password")
 }

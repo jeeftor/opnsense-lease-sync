@@ -1,3 +1,4 @@
+// pkg/dhcp.go
 package pkg
 
 import (
@@ -7,19 +8,6 @@ import (
 	"strings"
 )
 
-// DHCP represents the DHCP lease file reader
-type DHCP struct {
-	path string
-}
-
-// DHCPLease represents a DHCP lease entry
-type DHCPLease struct {
-	IP       string
-	Hostname string
-	MAC      string
-	IsActive bool
-}
-
 func NewDHCP(path string) *DHCP {
 	return &DHCP{path: path}
 }
@@ -28,39 +16,35 @@ func (d *DHCP) Path() string {
 	return d.path
 }
 
-func (d *DHCP) GetLeases() (map[string]DHCPLease, error) {
+func (d *DHCP) GetLeases() (map[string]ISCDHCPLease, error) {
 	file, err := os.Open(d.path)
 	if err != nil {
 		return nil, fmt.Errorf("opening lease file: %w", err)
 	}
 	defer file.Close()
 
-	leases := make(map[string]DHCPLease)
+	leases := make(map[string]ISCDHCPLease)
 	scanner := bufio.NewScanner(file)
 
-	var currentLease DHCPLease
+	var currentLease ISCDHCPLease
 	var inLeaseBlock bool
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
 		if strings.HasPrefix(line, "lease") {
-			// New lease entry
 			inLeaseBlock = true
 			parts := strings.Fields(line)
 			if len(parts) > 1 {
 				currentLease.IP = parts[1]
 			}
 		} else if strings.HasPrefix(line, "}") {
-			// End of lease entry
 			inLeaseBlock = false
 			if currentLease.MAC != "" {
-				// Store lease by MAC address for easier lookup
 				leases[currentLease.MAC] = currentLease
 			}
-			currentLease = DHCPLease{} // Reset for next lease
+			currentLease = ISCDHCPLease{} // Reset for next lease
 		} else if inLeaseBlock {
-			// Parse details within the lease block
 			if strings.HasPrefix(line, "binding state active") {
 				currentLease.IsActive = true
 			} else if strings.HasPrefix(line, "hardware ethernet") {

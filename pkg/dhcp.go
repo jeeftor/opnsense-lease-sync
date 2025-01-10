@@ -1,11 +1,18 @@
-package dhcp
+package pkg
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
 
+// DHCP represents the DHCP lease file reader
+type DHCP struct {
+	path string
+}
+
+// Lease represents a DHCP lease entry
 type Lease struct {
 	IP       string
 	Hostname string
@@ -13,10 +20,18 @@ type Lease struct {
 	IsActive bool
 }
 
-func ParseLeaseFile(path string) (map[string]Lease, error) {
-	file, err := os.Open(path)
+func NewDHCP(path string) *DHCP {
+	return &DHCP{path: path}
+}
+
+func (d *DHCP) Path() string {
+	return d.path
+}
+
+func (d *DHCP) GetLeases() (map[string]Lease, error) {
+	file, err := os.Open(d.path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("opening lease file: %w", err)
 	}
 	defer file.Close()
 
@@ -40,29 +55,30 @@ func ParseLeaseFile(path string) (map[string]Lease, error) {
 			// End of lease entry
 			inLeaseBlock = false
 			if currentLease.MAC != "" {
-				leases[currentLease.IP] = currentLease
+				// Store lease by MAC address for easier lookup
+				leases[currentLease.MAC] = currentLease
 			}
 			currentLease = Lease{} // Reset for next lease
 		} else if inLeaseBlock {
 			// Parse details within the lease block
-			if strings.HasPrefix(line, "starts") {
-				currentLease.IsActive = true // Simplified, in real scenario you'd check if it's in the future
+			if strings.HasPrefix(line, "binding state active") {
+				currentLease.IsActive = true
 			} else if strings.HasPrefix(line, "hardware ethernet") {
 				parts := strings.Fields(line)
 				if len(parts) > 2 {
-					currentLease.MAC = parts[2]
+					currentLease.MAC = strings.TrimSuffix(parts[2], ";")
 				}
 			} else if strings.HasPrefix(line, "client-hostname") {
 				parts := strings.Fields(line)
 				if len(parts) > 1 {
-					currentLease.Hostname = strings.Trim(parts[1], "\"")
+					currentLease.Hostname = strings.Trim(strings.TrimSuffix(parts[1], ";"), "\"")
 				}
 			}
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scanning lease file: %w", err)
 	}
 
 	return leases, nil

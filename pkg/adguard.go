@@ -1,4 +1,4 @@
-package adguard
+package pkg
 
 import (
 	"bytes"
@@ -7,10 +7,12 @@ import (
 	"net/http"
 )
 
-type Client struct {
-	BaseURL string
+// AdGuard represents the AdGuard Home API client
+type AdGuard struct {
+	baseURL string
 }
 
+// AdGuardClient represents a client in AdGuard Home
 type AdGuardClient struct {
 	Name              string   `json:"name"`
 	IDs               []string `json:"ids"` // MAC addresses
@@ -18,12 +20,12 @@ type AdGuardClient struct {
 	UseGlobalSettings bool     `json:"use_global_settings"`
 }
 
-func New(baseURL string) *Client {
-	return &Client{BaseURL: baseURL}
+func NewAdGuard(baseURL string) *AdGuard {
+	return &AdGuard{baseURL: baseURL}
 }
 
-func (c *Client) GetClients() ([]AdGuardClient, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/control/clients", c.BaseURL))
+func (c *AdGuard) GetClients() ([]AdGuardClient, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/control/clients", c.baseURL))
 	if err != nil {
 		return nil, fmt.Errorf("getting clients: %w", err)
 	}
@@ -41,7 +43,7 @@ func (c *Client) GetClients() ([]AdGuardClient, error) {
 	return clients, nil
 }
 
-func (c *Client) UpdateClient(name, ip, mac string) error {
+func (c *AdGuard) UpdateClient(name, ip, mac string) error {
 	client := AdGuardClient{
 		Name:              name,
 		IDs:               []string{mac},
@@ -54,7 +56,7 @@ func (c *Client) UpdateClient(name, ip, mac string) error {
 		return fmt.Errorf("marshal JSON: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/control/clients", c.BaseURL), bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/control/clients", c.baseURL), bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("creating request: %w", err)
 	}
@@ -74,8 +76,8 @@ func (c *Client) UpdateClient(name, ip, mac string) error {
 	return nil
 }
 
-func (c *Client) RemoveClient(clientID string) error {
-	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/control/clients/%s", c.BaseURL, clientID), nil)
+func (c *AdGuard) RemoveClient(clientID string) error {
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/control/clients/%s", c.baseURL, clientID), nil)
 	if err != nil {
 		return fmt.Errorf("creating delete request: %w", err)
 	}
@@ -93,7 +95,7 @@ func (c *Client) RemoveClient(clientID string) error {
 	return nil
 }
 
-func (c *Client) FindClientByMAC(mac string) (*AdGuardClient, error) {
+func (c *AdGuard) FindClientByMAC(mac string) (*AdGuardClient, error) {
 	clients, err := c.GetClients()
 	if err != nil {
 		return nil, fmt.Errorf("getting clients: %w", err)
@@ -102,7 +104,8 @@ func (c *Client) FindClientByMAC(mac string) (*AdGuardClient, error) {
 	for _, client := range clients {
 		for _, id := range client.IDs {
 			if id == mac {
-				return &client, nil
+				clientCopy := client // Create copy to avoid pointer to loop variable
+				return &clientCopy, nil
 			}
 		}
 	}

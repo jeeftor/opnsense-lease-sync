@@ -2,13 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"opnsense-lease-sync/internal/logger"
-	"opnsense-lease-sync/internal/service"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"opnsense-lease-sync/pkg"
 )
 
 // serveCmd represents the serve command
@@ -19,12 +18,12 @@ var serveCmd = &cobra.Command{
 and automatically syncs them to AdGuard Home. This is the recommended
 mode for production use.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logger, err := logger.NewLogger()
+		logger, err := pkg.NewLogger()
 		if err != nil {
 			return fmt.Errorf("failed to initialize logger: %w", err)
 		}
 
-		syncService, err := service.New(service.Config{
+		syncService, err := pkg.NewSyncService(pkg.Config{
 			AdGuardURL: adguardURL,
 			LeasePath:  leasePath,
 			DryRun:     dryRun,
@@ -52,4 +51,8 @@ mode for production use.`,
 
 		return nil
 	},
+}
+
+func init() {
+	rootCmd.AddCommand(serveCmd)
 }

@@ -1,0 +1,11 @@
+[Unit]
+Description=DHCP to AdGuard Home Sync Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/dhcp-adguard-sync
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target

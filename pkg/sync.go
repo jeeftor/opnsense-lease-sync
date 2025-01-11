@@ -3,6 +3,7 @@ package pkg
 import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -164,7 +165,26 @@ func (s *SyncService) updateClientWithRetry(existingClient *adguard.Client, leas
 }
 
 func (s *SyncService) handleLeaseUpdate(existingClient *adguard.Client, lease ISCDHCPLease, mac string) error {
-	action := fmt.Sprintf("Updating client %s (%s) with IP %s", lease.Hostname, mac, lease.IP)
+	hostname := lease.Hostname
+	// Try RDNS if hostname is empty
+	if hostname == "" {
+		names, err := net.LookupAddr(lease.IP)
+		if err == nil && len(names) > 0 {
+			hostname = strings.TrimSuffix(names[0], ".")
+			if s.debug {
+				s.logger.Info(fmt.Sprintf("Using RDNS hostname %s for update of MAC %s", hostname, mac))
+			}
+		} else {
+			s.logger.Info(fmt.Sprintf("No hostname and no RDNS hostname available for MAC %s", mac))
+			return fmt.Errorf("no hostname available for update")
+		}
+	}
+
+	// Create a modified lease with the RDNS hostname if needed
+	updatedLease := lease
+	updatedLease.Hostname = hostname
+
+	action := fmt.Sprintf("Updating client [%s] (%s) with IP %s", hostname, mac, lease.IP)
 
 	if s.dryRun {
 		s.logger.Info("DRY-RUN: " + action)
@@ -172,7 +192,7 @@ func (s *SyncService) handleLeaseUpdate(existingClient *adguard.Client, lease IS
 	}
 
 	s.logger.Info(action)
-	if err := s.updateClientWithRetry(existingClient, lease, mac); err != nil {
+	if err := s.updateClientWithRetry(existingClient, updatedLease, mac); err != nil {
 		s.logger.Error(fmt.Sprintf("Failed to update client: %v", err))
 		return err
 	}
@@ -271,15 +291,30 @@ func (s *SyncService) Sync() error {
 					s.logger.Error(fmt.Sprintf("Error updating lease %s: %v", mac, err))
 				}
 			}
-		} else if lease.Hostname != "" {
-			if s.debug {
-				s.logger.Info(fmt.Sprintf("No existing client found for MAC %s, adding new client", mac))
-			}
+		} else {
+			hostname := lease.Hostname
 
-			err := s.addClientWithRetry(lease.Hostname, mac, lease.IP)
+			if hostname == "" {
+				// Try reverse lookup
+				// Try reverse DNS lookup if no hostname provided
+				names, err := net.LookupAddr(lease.IP)
+				if err == nil && len(names) > 0 {
+					// Remove trailing dot from hostname if present
+					hostname = strings.TrimSuffix(names[0], ".")
+
+					if s.debug {
+						s.logger.Info(fmt.Sprintf("No existing client found for MAC %s, using RDNS hostname %s", mac, hostname))
+					}
+				} else {
+					s.logger.Info(fmt.Sprintf("No existing client found for MAC %s and no RDNS hostname available", mac))
+					continue
+				}
+			}
+			err = s.addClientWithRetry(hostname, mac, lease.IP)
 			if err != nil {
 				s.logger.Error(fmt.Sprintf("Error adding lease %s: %v", mac, err))
 			}
+
 		}
 	}
 

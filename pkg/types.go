@@ -15,8 +15,8 @@ type SyncService struct {
 	watcher              *fsnotify.Watcher
 	done                 chan bool
 	dryRun               bool
-	preserveDeletedHosts bool // New flag to control deletion behavior
-
+	preserveDeletedHosts bool
+	debug                bool
 }
 
 // ISCDHCPLease represents a lease from ISC DHCP server's lease file

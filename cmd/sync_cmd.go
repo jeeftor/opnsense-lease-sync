@@ -29,6 +29,7 @@ and then exits. This is useful for testing or manual synchronization.`,
 			Scheme:     scheme,
 			Timeout:    timeout,
 			Logger:     logger,
+			Debug:      debug,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create service: %w", err)

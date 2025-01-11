@@ -122,9 +122,9 @@ func (a *AdGuard) UpdateClient(name, mac, ip string) error {
 }
 
 // RemoveClient removes a client from AdGuard Home
-func (a *AdGuard) RemoveClient(mac string) error {
+func (a *AdGuard) RemoveClient(name string) error {
 	clientDelete := adguard.ClientDelete{
-		Name: mac,
+		Name: name,
 	}
 
 	err := a.client.DeleteClient(clientDelete)

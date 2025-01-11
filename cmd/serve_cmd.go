@@ -1,3 +1,4 @@
+// cmd/serve.go
 package cmd
 
 import (
@@ -24,10 +25,16 @@ mode for production use.`,
 		}
 
 		syncService, err := pkg.NewSyncService(pkg.Config{
-			AdGuardURL: adguardURL,
-			LeasePath:  leasePath,
-			DryRun:     dryRun,
-			Logger:     logger,
+			AdGuardURL:           adguardURL,
+			LeasePath:            leasePath,
+			DryRun:               dryRun,
+			Username:             username,
+			Password:             password,
+			Scheme:               scheme,
+			Timeout:              timeout,
+			Logger:               logger,
+			PreserveDeletedHosts: preserveDeletedHosts, // Add this if you want to expose it as a flag
+			Debug:                debug,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create service: %w", err)
@@ -55,4 +62,7 @@ mode for production use.`,
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
+	// If you want to add preserve-deleted-hosts flag only for serve command
+	serveCmd.Flags().BoolVar(&preserveDeletedHosts, "preserve-deleted-hosts", false,
+		"Don't remove AdGuard clients when their DHCP leases expire")
 }

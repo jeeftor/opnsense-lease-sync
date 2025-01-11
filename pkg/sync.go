@@ -49,14 +49,24 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 }
 
 func (s *SyncService) addClientWithRetry(hostname, mac, ip string) error {
+
+	ips := []string{ip}
+
+	// Try to get IPv6 addresses
+	ip6Addresses, err := GetIP6forMAC(mac)
+	if err == nil && len(ip6Addresses) > 0 {
+		// Append all IPv6 addresses to our IPs array
+		ips = append(ips, ip6Addresses...)
+	}
+
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Attempting to add client - hostname: %s, MAC: %s, IP: %s", hostname, mac, ip))
+		s.logger.Info(fmt.Sprintf("Attempting to add client - hostname: %s, MAC: %s, IPs: %s", hostname, mac, ips))
 	}
 
 	maxRetries := 10
 
 	// First try without suffix
-	err := s.adguard.AddClient(hostname, mac, ip)
+	err = s.adguard.AddClient(hostname, mac, ips)
 	if err == nil {
 		if s.debug {
 			s.logger.Info(fmt.Sprintf("Successfully added client %s on first attempt", hostname))
@@ -80,7 +90,7 @@ func (s *SyncService) addClientWithRetry(hostname, mac, ip string) error {
 			s.logger.Info(fmt.Sprintf("Attempting retry %d with name: %s", i, newName))
 		}
 
-		err = s.adguard.AddClient(newName, mac, ip)
+		err = s.adguard.AddClient(newName, mac, ips)
 		if err == nil {
 			s.logger.Info(fmt.Sprintf("Successfully added client with modified name: %s", newName))
 			return nil
@@ -99,6 +109,7 @@ func (s *SyncService) addClientWithRetry(hostname, mac, ip string) error {
 }
 
 func (s *SyncService) updateClientWithRetry(existingClient *adguard.Client, lease ISCDHCPLease, mac string) error {
+
 	if s.debug {
 		s.logger.Info(fmt.Sprintf("Attempting to update client - MAC: %s, Current name: %s, New name: %s",
 			mac, existingClient.Name, lease.Hostname))
@@ -109,7 +120,16 @@ func (s *SyncService) updateClientWithRetry(existingClient *adguard.Client, leas
 	// First try with original name
 	updatedClient := *existingClient
 	updatedClient.Name = lease.Hostname
+
+	// Construct initial ID list
 	updatedClient.Ids = []string{mac, lease.IP}
+
+	// Calculate IPv6 IDs
+	ip6Addresses, err := GetIP6forMAC(mac)
+	if err == nil && len(ip6Addresses) > 0 {
+		// Append all IPv6 addresses to our ID array
+		updatedClient.Ids = append(updatedClient.Ids, ip6Addresses...)
+	}
 
 	clientUpdate := adguard.ClientUpdate{
 		Name: existingClient.Name,
@@ -120,7 +140,7 @@ func (s *SyncService) updateClientWithRetry(existingClient *adguard.Client, leas
 		s.logger.Info(fmt.Sprintf("Attempting initial update with original name: %s", lease.Hostname))
 	}
 
-	_, err := s.adguard.client.UpdateClient(clientUpdate)
+	_, err = s.adguard.client.UpdateClient(clientUpdate)
 	if err == nil {
 		if s.debug {
 			s.logger.Info(fmt.Sprintf("Successfully updated client on first attempt"))
@@ -184,7 +204,9 @@ func (s *SyncService) handleLeaseUpdate(existingClient *adguard.Client, lease IS
 	updatedLease := lease
 	updatedLease.Hostname = hostname
 
-	action := fmt.Sprintf("Updating client [%s] (%s) with IP %s", hostname, mac, lease.IP)
+	ip6Addresses, _ := GetIP6forMAC(mac)
+
+	action := fmt.Sprintf("Updating client [%s] (%s) with IP4 [%s] IP6 %s", hostname, mac, lease.IP, ip6Addresses)
 
 	if s.dryRun {
 		s.logger.Info("DRY-RUN: " + action)
@@ -204,6 +226,10 @@ func (s *SyncService) Sync() error {
 
 	if s.debug {
 		s.logger.Info("Fetching current clients from AdGuard")
+	}
+
+	if s.debug {
+		s.logger.Info("Fetching IPV6 table")
 	}
 
 	// Get current clients from AdGuard
@@ -250,6 +276,7 @@ func (s *SyncService) Sync() error {
 
 	// Process active leases
 	for mac, lease := range iscLeases {
+
 		if !lease.IsActive {
 			if s.debug {
 				s.logger.Info(fmt.Sprintf("Skipping inactive lease for MAC %s", mac))

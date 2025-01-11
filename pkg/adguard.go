@@ -73,10 +73,13 @@ func (a *AdGuard) GetClientByMAC(mac string) (*adguard.Client, error) {
 }
 
 // AddClient creates a new client in AdGuard Home
-func (a *AdGuard) AddClient(name, mac, ip string) error {
+func (a *AdGuard) AddClient(name string, mac string, ips []string) error {
+	// Initialize availableIds with MAC address and all provided IPs
+	availableIds := append([]string{mac}, ips...)
+
 	client := adguard.Client{
 		Name: name,
-		Ids:  []string{mac, ip},
+		Ids:  availableIds,
 		// Set sensible defaults for AdGuard Home client
 		UseGlobalSettings:        true,
 		UseGlobalBlockedServices: true,
@@ -97,29 +100,33 @@ func (a *AdGuard) AddClient(name, mac, ip string) error {
 }
 
 // UpdateClient updates an existing client in AdGuard Home
-func (a *AdGuard) UpdateClient(name, mac, ip string) error {
-	clientUpdate := adguard.ClientUpdate{
-		Name: mac, // Use MAC as identifier
-		Data: adguard.Client{
-			Name:                     name,
-			Ids:                      []string{mac, ip},
-			UseGlobalSettings:        true,
-			UseGlobalBlockedServices: true,
-			FilteringEnabled:         true,
-			ParentalEnabled:          false,
-			SafebrowsingEnabled:      false,
-			SafeSearch: adguard.SafeSearchConfig{
-				Enabled: false,
-			},
-		},
-	}
-
-	_, err := a.client.UpdateClient(clientUpdate)
-	if err != nil {
-		return fmt.Errorf("updating client: %w", err)
-	}
-	return nil
-}
+// func (a *AdGuard) UpdateClient(name string, mac string, ips []string) error {
+//
+//		availableIds := append([]string{mac}, ips...)
+//
+//		clientUpdate := adguard.ClientUpdate{
+//			Name: mac, // Use MAC as identifier
+//			Data: adguard.Client{
+//				Name:                     name,
+//				Ids:                      availableIds,
+//				UseGlobalSettings:        true,
+//				UseGlobalBlockedServices: true,
+//				FilteringEnabled:         true,
+//				ParentalEnabled:          false,
+//				SafebrowsingEnabled:      false,
+//				SafeSearch: adguard.SafeSearchConfig{
+//					Enabled: false,
+//				},
+//			},
+//		}
+//
+//		_, err := a.client.UpdateClient(clientUpdate)
+//		if err != nil {
+//			return fmt.Errorf("updating client: %w", err)
+//		}
+//		return nil
+//	}
+//
 
 // RemoveClient removes a client from AdGuard Home
 func (a *AdGuard) RemoveClient(name string) error {

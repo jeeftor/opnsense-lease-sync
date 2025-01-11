@@ -77,6 +77,10 @@ that watches for lease file changes.`,
 			return fmt.Errorf("scheme must be either 'http' or 'https'")
 		}
 
+		if envDebug := os.Getenv("DEBUG"); envDebug != "" && !cmd.Flags().Changed("debug") {
+			debug = envDebug == "true" || envDebug == "1"
+		}
+
 		return nil
 	},
 }
@@ -98,7 +102,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&timeout, "timeout", 10, "API timeout in seconds")
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Dry run mode (print actions instead of executing)")
 	rootCmd.PersistentFlags().BoolVar(&preserveDeletedHosts, "preserve-deleted-hosts", false, "Don't remove AdGuard clients when their DHCP leases expire")
-	rootCmd.PersistentFlags().BoolVar(&preserveDeletedHosts, "debug", false, "Show debug info")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show debug info")
 
 	// Add flag usage examples to help text
 	rootCmd.Example = `  # Run with username and password

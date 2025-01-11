@@ -246,7 +246,7 @@ func (s *SyncService) Sync() error {
 	currentClientsMap := make(map[string]*adguard.Client)
 	for _, client := range currentClients {
 		for _, id := range client.Ids {
-			if strings.Contains(id, ":") { // MAC address check
+			if IsValidMAC(id) {
 				clientCopy := client
 				currentClientsMap[id] = &clientCopy
 				if s.debug {

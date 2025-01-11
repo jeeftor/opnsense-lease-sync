@@ -78,3 +78,27 @@ func GetIP6forMAC(mac string) ([]string, error) {
 	}
 	return []string{}, nil
 }
+
+func IsValidMAC(addr string) bool {
+	// Common MAC address formats:
+	// XX:XX:XX:XX:XX:XX
+	// XX-XX-XX-XX-XX-XX
+	// XXXXXXXXXXXX
+
+	// Remove any separators
+	clean := strings.ReplaceAll(strings.ReplaceAll(addr, ":", ""), "-", "")
+
+	// MAC should be exactly 12 hex characters after removing separators
+	if len(clean) != 12 {
+		return false
+	}
+
+	// Verify all characters are valid hex
+	for _, char := range clean {
+		if !((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F')) {
+			return false
+		}
+	}
+
+	return true
+}

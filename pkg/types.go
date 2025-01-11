@@ -12,7 +12,8 @@ type SyncService struct {
 	adguard              *AdGuard
 	leases               *DHCP
 	logger               Logger
-	watcher              *fsnotify.Watcher
+	dhcpLeaseWatcher     *fsnotify.Watcher
+	ndpWatcher           *NDPTableWatcher // New field for NDP watcher
 	done                 chan bool
 	dryRun               bool
 	preserveDeletedHosts bool
@@ -55,3 +56,22 @@ type AdGuardDHCPResponse struct {
 type StaticDHCPResponse struct {
 	Leases []StaticDHCPLease `json:"static_leases"`
 }
+
+// UpdateAction represents what kind of update is needed for a client
+type AdguardUpdateAction struct {
+	Type        AdguardUpdateType
+	Reason      string
+	IDs         []string
+	NeedsUpdate bool
+	IPFound     bool
+	Hostname    string
+	MAC         string
+}
+
+type AdguardUpdateType int
+
+const (
+	NoUpdate AdguardUpdateType = iota
+	Update
+	Add
+)

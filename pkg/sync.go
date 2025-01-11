@@ -3,7 +3,6 @@ package pkg
 import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,9 +15,9 @@ import (
 
 // NewSyncService creates a new sync service instance
 func NewSyncService(cfg Config) (*SyncService, error) {
-	watcher, err := fsnotify.NewWatcher()
+	dhcpLeaseWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil, fmt.Errorf("creating file watcher: %w", err)
+		return nil, fmt.Errorf("creating file dhcpLeaseWatcher: %w", err)
 	}
 
 	adguardClient, err := NewAdGuard(cfg)
@@ -26,16 +25,30 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 		return nil, fmt.Errorf("creating AdGuard client: %w", err)
 	}
 
+	// Create NDP watcher
+	ndpWatcher, err := NewNDPTableWatcher(NDPTableWatcherConfig{
+		UpdateInterval: cfg.NDPUpdateInterval,
+		Debug:          cfg.Debug,
+		Logger:         cfg.Logger,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating NDP table watcher: %w", err)
+
+	}
+
 	service := &SyncService{
 		adguard:              adguardClient,
 		leases:               NewDHCP(cfg.LeasePath),
 		logger:               cfg.Logger,
-		watcher:              watcher,
+		dhcpLeaseWatcher:     dhcpLeaseWatcher,
+		ndpWatcher:           ndpWatcher,
 		done:                 make(chan bool),
 		dryRun:               cfg.DryRun,
 		preserveDeletedHosts: cfg.PreserveDeletedHosts,
 		debug:                cfg.Debug,
 	}
+	// Register callback for NDP table updates
+	ndpWatcher.AddCallback(service.handleNDPUpdate)
 
 	if service.debug {
 		service.logger.Info("Created new SyncService with config:")
@@ -43,30 +56,35 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 		service.logger.Info(fmt.Sprintf("- Dry run: %v", cfg.DryRun))
 		service.logger.Info(fmt.Sprintf("- Preserve deleted hosts: %v", cfg.PreserveDeletedHosts))
 		service.logger.Info(fmt.Sprintf("- Debug mode: enabled"))
+		service.logger.Info(fmt.Sprintf("- NDP update interval: %v", cfg.NDPUpdateInterval))
+
 	}
 
 	return service, nil
 }
 
-func (s *SyncService) addClientWithRetry(hostname, mac, ip string) error {
-
-	ips := []string{ip}
-
-	// Try to get IPv6 addresses
-	ip6Addresses, err := GetIP6forMAC(mac)
-	if err == nil && len(ip6Addresses) > 0 {
-		// Append all IPv6 addresses to our IPs array
-		ips = append(ips, ip6Addresses...)
+// handleNDPUpdate is called when the NDP table changes
+func (s *SyncService) handleNDPUpdate(ndpTable map[string][]string) {
+	if s.debug {
+		s.logger.Info("NDP table update detected")
 	}
 
+	// Trigger a sync when NDP table changes
+	if err := s.Sync(); err != nil {
+		s.logger.Error(fmt.Sprintf("Sync after NDP update failed: %v", err))
+	}
+}
+func (s *SyncService) addClientWithRetry(action *AdguardUpdateAction) error {
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Attempting to add client - hostname: %s, MAC: %s, IPs: %s", hostname, mac, ips))
+		s.logger.Info(fmt.Sprintf("Attempting to add client - hostname: %s, MAC: %s, IDs: %v",
+			action.Hostname, action.MAC, action.IDs))
 	}
 
 	maxRetries := 10
+	hostname := action.Hostname
 
 	// First try without suffix
-	err = s.adguard.AddClient(hostname, mac, ips)
+	err := s.adguard.AddClient(hostname, action.MAC, action.IDs)
 	if err == nil {
 		if s.debug {
 			s.logger.Info(fmt.Sprintf("Successfully added client %s on first attempt", hostname))
@@ -90,7 +108,7 @@ func (s *SyncService) addClientWithRetry(hostname, mac, ip string) error {
 			s.logger.Info(fmt.Sprintf("Attempting retry %d with name: %s", i, newName))
 		}
 
-		err = s.adguard.AddClient(newName, mac, ips)
+		err = s.adguard.AddClient(newName, action.MAC, action.IDs)
 		if err == nil {
 			s.logger.Info(fmt.Sprintf("Successfully added client with modified name: %s", newName))
 			return nil
@@ -100,6 +118,7 @@ func (s *SyncService) addClientWithRetry(hostname, mac, ip string) error {
 			s.logger.Info(fmt.Sprintf("Retry %d failed: %v", i, err))
 		}
 
+		// Only continue retrying if it's a name conflict
 		if !strings.Contains(strings.ToLower(err.Error()), "uses the same name") {
 			return err
 		}
@@ -108,28 +127,75 @@ func (s *SyncService) addClientWithRetry(hostname, mac, ip string) error {
 	return fmt.Errorf("failed to add client after %d retries: %v", maxRetries, err)
 }
 
-func (s *SyncService) updateClientWithRetry(existingClient *adguard.Client, lease ISCDHCPLease, mac string) error {
+//ips := []string{ip}
+//
+//// Try to get IPv6 addresses
+//ip6Addresses, err := s.ndpWatcher.GetIP6forMAC(mac)
+//if err == nil && len(ip6Addresses) > 0 {
+//	// Append all IPv6 addresses to our IPs array
+//	ips = append(ips, ip6Addresses...)
+//}
+//
+//if s.debug {
+//	s.logger.Info(fmt.Sprintf("Attempting to add client - hostname: %s, MAC: %s, IPs: %s", hostname, mac, ips))
+//}
+//
+//maxRetries := 10
+//
+//// First try without suffix
+//err = s.adguard.AddClient(hostname, mac, ips)
+//if err == nil {
+//	if s.debug {
+//		s.logger.Info(fmt.Sprintf("Successfully added client %s on first attempt", hostname))
+//	}
+//	return nil
+//}
+//
+//if s.debug {
+//	s.logger.Info(fmt.Sprintf("Initial add attempt failed: %v", err))
+//}
+//
+//// If error is not name conflict, return immediately
+//if !strings.Contains(strings.ToLower(err.Error()), "uses the same name") {
+//	return err
+//}
+//
+//// Try with incremental suffixes
+//for i := 1; i <= maxRetries; i++ {
+//	newName := fmt.Sprintf("%s-%d", hostname, i)
+//	if s.debug {
+//		s.logger.Info(fmt.Sprintf("Attempting retry %d with name: %s", i, newName))
+//	}
+//
+//	err = s.adguard.AddClient(newName, mac, ips)
+//	if err == nil {
+//		s.logger.Info(fmt.Sprintf("Successfully added client with modified name: %s", newName))
+//		return nil
+//	}
+//
+//	if s.debug {
+//		s.logger.Info(fmt.Sprintf("Retry %d failed: %v", i, err))
+//	}
+//
+//	if !strings.Contains(strings.ToLower(err.Error()), "uses the same name") {
+//		return err
+//	}
+//}
+//
+//return fmt.Errorf("failed to add client after %d retries: %v", maxRetries, err)
 
+func (s *SyncService) updateClient(existingClient *adguard.Client, action *AdguardUpdateAction) error {
 	if s.debug {
 		s.logger.Info(fmt.Sprintf("Attempting to update client - MAC: %s, Current name: %s, New name: %s",
-			mac, existingClient.Name, lease.Hostname))
+			action.MAC, existingClient.Name, action.Hostname))
 	}
 
-	maxRetries := 10
+	hostname := action.Hostname
 
 	// First try with original name
 	updatedClient := *existingClient
-	updatedClient.Name = lease.Hostname
-
-	// Construct initial ID list
-	updatedClient.Ids = []string{mac, lease.IP}
-
-	// Calculate IPv6 IDs
-	ip6Addresses, err := GetIP6forMAC(mac)
-	if err == nil && len(ip6Addresses) > 0 {
-		// Append all IPv6 addresses to our ID array
-		updatedClient.Ids = append(updatedClient.Ids, ip6Addresses...)
-	}
+	updatedClient.Name = hostname
+	updatedClient.Ids = action.IDs
 
 	clientUpdate := adguard.ClientUpdate{
 		Name: existingClient.Name,
@@ -137,114 +203,176 @@ func (s *SyncService) updateClientWithRetry(existingClient *adguard.Client, leas
 	}
 
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Attempting initial update with original name: %s", lease.Hostname))
+		s.logger.Info(fmt.Sprintf("Updating: %s", hostname))
 	}
 
-	_, err = s.adguard.client.UpdateClient(clientUpdate)
+	_, err := s.adguard.client.UpdateClient(clientUpdate)
 	if err == nil {
 		if s.debug {
-			s.logger.Info(fmt.Sprintf("Successfully updated client on first attempt"))
+			s.logger.Info(fmt.Sprintf("Successfully updated client"))
 		}
 		return nil
 	}
 
-	if s.debug {
-		s.logger.Info(fmt.Sprintf("Initial update attempt failed: %v", err))
-	}
-
-	if !strings.Contains(strings.ToLower(err.Error()), "uses the same name") {
-		return err
-	}
-
-	// Try with incremental suffixes
-	for i := 1; i <= maxRetries; i++ {
-		newName := fmt.Sprintf("%s-%d", lease.Hostname, i)
-		if s.debug {
-			s.logger.Info(fmt.Sprintf("Attempting retry %d with name: %s", i, newName))
-		}
-
-		updatedClient.Name = newName
-		clientUpdate.Data = updatedClient
-
-		_, err = s.adguard.client.UpdateClient(clientUpdate)
-		if err == nil {
-			s.logger.Info(fmt.Sprintf("Successfully updated client with modified name: %s", newName))
-			return nil
-		}
-
-		if s.debug {
-			s.logger.Info(fmt.Sprintf("Retry %d failed: %v", i, err))
-		}
-
-		if !strings.Contains(strings.ToLower(err.Error()), "uses the same name") {
-			return err
-		}
-	}
-
-	return fmt.Errorf("failed to update client after %d retries: %v", maxRetries, err)
+	return fmt.Errorf("failed to update client: %v", err)
 }
 
-func (s *SyncService) handleLeaseUpdate(existingClient *adguard.Client, lease ISCDHCPLease, mac string) error {
-	hostname := lease.Hostname
-	// Try RDNS if hostname is empty
-	if hostname == "" {
-		names, err := net.LookupAddr(lease.IP)
-		if err == nil && len(names) > 0 {
-			hostname = strings.TrimSuffix(names[0], ".")
-			if s.debug {
-				s.logger.Info(fmt.Sprintf("Using RDNS hostname %s for update of MAC %s", hostname, mac))
-			}
-		} else {
-			s.logger.Info(fmt.Sprintf("No hostname and no RDNS hostname available for MAC %s", mac))
-			return fmt.Errorf("no hostname available for update")
-		}
+//func (s *SyncService) handleLeaseUpdate(existingClient *adguard.Client, lease ISCDHCPLease, mac string) error {
+//
+//	// Build an update action
+//	action := &AdguardUpdateAction{
+//		Type:     Update,
+//		Hostname: lease.Hostname,
+//		MAC:      mac,
+//	}
+//
+//	// Get IPv6 IDs
+//	ipv6IDs, err := s.ndpWatcher.GetIP6forMAC(mac)
+//	if err != nil {
+//		ipv6IDs = []string{}
+//	}
+//	action.IDs = ipv6IDs
+//	action.IDs = append(action.IDs, lease.IP)
+//	//
+//	//
+//	//
+//	//// Try RDNS if hostname is empty
+//	//if hostname == "" {
+//	//	names, err := net.LookupAddr(lease.IP)
+//	//	if err == nil && len(names) > 0 {
+//	//		hostname = strings.TrimSuffix(names[0], ".")
+//	//		if s.debug {
+//	//			s.logger.Info(fmt.Sprintf("Using RDNS hostname %s for update of MAC %s", hostname, mac))
+//	//		}
+//	//	} else {
+//	//		s.logger.Info(fmt.Sprintf("No hostname and no RDNS hostname available for MAC %s", mac))
+//	//		return fmt.Errorf("no hostname available for update")
+//	//	}
+//	//}
+//	//
+//	//// Create a modified lease with the RDNS hostname if needed
+//	//updatedLease := lease
+//	//updatedLease.Hostname = hostname
+//
+//	//ip6Addresses, _ := s.ndpWatcher.GetIP6forMAC(mac)
+//	//
+//	//action := fmt.Sprintf("Updating client [%s] (%s) with IP4 [%s] IP6 %s", hostname, mac, lease.IP, ip6Addresses)
+//	//
+//	//if s.dryRun {
+//	//	s.logger.Info("DRY-RUN: " + action)
+//	//	return nil
+//	//}
+//	//
+//	//s.logger.Info(action)
+//	if err := s.updateClient(existingClient, action); err != nil {
+//		s.logger.Error(fmt.Sprintf("Failed to update client: %v", err))
+//		return err
+//	}
+//	return nil
+//}
+
+// determineUpdateAction checks if and what kind of update is needed for a given lease
+func (s *SyncService) determineUpdateAction(lease ISCDHCPLease, mac string, existing *adguard.Client) (*AdguardUpdateAction, error) {
+	action := &AdguardUpdateAction{
+		Type:     NoUpdate,
+		Hostname: lease.Hostname,
+		MAC:      mac,
 	}
 
-	// Create a modified lease with the RDNS hostname if needed
-	updatedLease := lease
-	updatedLease.Hostname = hostname
-
-	ip6Addresses, _ := GetIP6forMAC(mac)
-
-	action := fmt.Sprintf("Updating client [%s] (%s) with IP4 [%s] IP6 %s", hostname, mac, lease.IP, ip6Addresses)
-
-	if s.dryRun {
-		s.logger.Info("DRY-RUN: " + action)
-		return nil
-	}
-
-	s.logger.Info(action)
-	if err := s.updateClientWithRetry(existingClient, updatedLease, mac); err != nil {
-		s.logger.Error(fmt.Sprintf("Failed to update client: %v", err))
-		return err
-	}
-	return nil
-}
-
-func (s *SyncService) Sync() error {
-	s.logger.Info("Starting sync")
-
-	if s.debug {
-		s.logger.Info("Fetching current clients from AdGuard")
-	}
-
-	if s.debug {
-		s.logger.Info("Fetching IPV6 table")
-	}
-
-	// Get current clients from AdGuard
-	currentClients, err := s.adguard.GetClients()
+	// Get IPv6 IDs
+	ipv6IDs, err := s.ndpWatcher.GetIP6forMAC(mac)
 	if err != nil {
-		return fmt.Errorf("getting AdGuard clients: %w", err)
+		ipv6IDs = []string{}
 	}
 
+	// Calculate RDNS
+	//rdnsNames, err := net.LookupAddr(lease.IP)
+
+	// Build wanted IDs list
+	action.IDs = ipv6IDs
+	//action.IDs = append(action.IDs, mac) // MAC is needed for an update - but seems to automatically be added to an Add
+	action.IDs = append(action.IDs, lease.IP)
+	// Skip RDNS
+	//if err == nil && len(rdnsNames) > 0 {
+	//	action.IDs = append(action.IDs, strings.Split(strings.TrimSuffix(rdnsNames[0], "."), ".")[0])
+	//}
+
+	// If no existing client, this is an Add
+	if existing == nil {
+		if action.Hostname == "" {
+			return action, fmt.Errorf("no hostname available for new client")
+		}
+
+		action.Type = Add
+		action.Reason = "new client"
+		return action, nil
+	}
+
+	// Compare existing vs wanted IDs
+	existingIDsMap := make(map[string]bool)
+	for _, id := range existing.Ids {
+		if id != mac { // exclude mac address (I think)
+			existingIDsMap[id] = true
+		}
+	}
+
+	// Ensure we also copy the mac address into this
+	wantedIDsMap := make(map[string]bool)
+	for _, id := range action.IDs {
+		wantedIDsMap[id] = true
+	}
+
+	// Check for missing IDs
+	for id := range wantedIDsMap {
+		if !existingIDsMap[id] {
+			if s.debug {
+				s.logger.Info(fmt.Sprintf("Missing ID found: %s for %s", id, mac))
+			}
+			action.NeedsUpdate = true
+			action.Reason = fmt.Sprintf("missing ID: %s", id)
+			break
+		}
+	}
+
+	// Check for extra IDs
+	if !action.NeedsUpdate {
+		for id := range existingIDsMap {
+			if !wantedIDsMap[id] {
+				if s.debug {
+					s.logger.Info(fmt.Sprintf("Extra ID found: %s", id))
+				}
+				action.NeedsUpdate = true
+				action.Reason = fmt.Sprintf("extra ID: %s", id)
+				break
+			}
+		}
+	}
+
+	// Check if IP is found
+	for _, id := range action.IDs {
+		if id == lease.IP {
+			action.IPFound = true
+			break
+		}
+	}
+
+	if action.NeedsUpdate || !action.IPFound {
+		action.Type = Update
+		// Update actions require the MAC address to be added
+		action.IDs = append(action.IDs, mac)
+	}
+
+	return action, nil
+}
+
+// buildClientMap creates a map of MAC addresses to AdGuard clients for efficient lookup
+func (s *SyncService) buildClientMap(clients []adguard.Client) map[string]*adguard.Client {
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Retrieved %d clients from AdGuard", len(currentClients)))
+		s.logger.Info("Building client MAC address map")
 	}
 
-	// Create maps for easier lookup
 	currentClientsMap := make(map[string]*adguard.Client)
-	for _, client := range currentClients {
+	for _, client := range clients {
 		for _, id := range client.Ids {
 			if IsValidMAC(id) {
 				clientCopy := client
@@ -258,8 +386,23 @@ func (s *SyncService) Sync() error {
 	}
 
 	if s.debug {
-		s.logger.Info("Fetching current DHCP leases")
+		s.logger.Info(fmt.Sprintf("Built map with %d clients", len(currentClientsMap)))
 	}
+
+	return currentClientsMap
+}
+
+func (s *SyncService) Sync() error {
+	s.logger.Info("Starting sync")
+
+	// Get current clients from AdGuard
+	currentClients, err := s.adguard.GetClients()
+	if err != nil {
+		return fmt.Errorf("getting AdGuard clients: %w", err)
+	}
+
+	// Create MAC address lookup map
+	currentClientsMap := s.buildClientMap(currentClients)
 
 	// Get current DHCP leases
 	iscLeases, err := s.leases.GetLeases()
@@ -267,16 +410,11 @@ func (s *SyncService) Sync() error {
 		return fmt.Errorf("getting DHCP leases: %w", err)
 	}
 
-	if s.debug {
-		s.logger.Info(fmt.Sprintf("Retrieved %d DHCP leases", len(iscLeases)))
-	}
-
-	// Track processed MACs to identify stale entries
+	// Track processed MACs
 	processedMACs := make(map[string]bool)
 
 	// Process active leases
 	for mac, lease := range iscLeases {
-
 		if !lease.IsActive {
 			if s.debug {
 				s.logger.Info(fmt.Sprintf("Skipping inactive lease for MAC %s", mac))
@@ -285,100 +423,76 @@ func (s *SyncService) Sync() error {
 		}
 
 		processedMACs[mac] = true
+		existing := currentClientsMap[mac]
 
-		if s.debug {
-			s.logger.Info(fmt.Sprintf("Processing lease - MAC: %s, Hostname: %s, IP: %s",
-				mac, lease.Hostname, lease.IP))
+		// Retrive the update action
+		action, err := s.determineUpdateAction(lease, mac, existing)
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("Error determining update action for %s: %v", mac, err))
+			continue
 		}
 
-		if existing := currentClientsMap[mac]; existing != nil {
-			if s.debug {
-				s.logger.Info(fmt.Sprintf("Found existing client for MAC %s", mac))
+		switch action.Type {
+		case Update:
+
+			if err := s.updateClient(existing, action); err != nil {
+				s.logger.Error(fmt.Sprintf("Error updating lease %s: %v", mac, err))
 			}
-
-			// Check if update needed
-			needsUpdate := false
-			ipFound := false
-
-			for _, id := range existing.Ids {
-				if id == lease.IP {
-					ipFound = true
-					needsUpdate = existing.Name != lease.Hostname
-					break
-				}
-			}
-
-			if s.debug {
-				s.logger.Info(fmt.Sprintf("Update check - IP found: %v, Needs update: %v", ipFound, needsUpdate))
-			}
-
-			// Update needed if hostname changed or IP not found
-			if needsUpdate || !ipFound {
-				if err := s.handleLeaseUpdate(existing, lease, mac); err != nil {
-					s.logger.Error(fmt.Sprintf("Error updating lease %s: %v", mac, err))
-				}
-			}
-		} else {
-			hostname := lease.Hostname
-
-			if hostname == "" {
-				// Try reverse lookup
-				// Try reverse DNS lookup if no hostname provided
-				names, err := net.LookupAddr(lease.IP)
-				if err == nil && len(names) > 0 {
-					// Remove trailing dot from hostname if present
-					hostname = strings.TrimSuffix(names[0], ".")
-
-					if s.debug {
-						s.logger.Info(fmt.Sprintf("No existing client found for MAC %s, using RDNS hostname %s", mac, hostname))
-					}
-				} else {
-					s.logger.Info(fmt.Sprintf("No existing client found for MAC %s and no RDNS hostname available", mac))
-					continue
-				}
-			}
-			err = s.addClientWithRetry(hostname, mac, lease.IP)
-			if err != nil {
+		case Add:
+			if err := s.addClientWithRetry(action); err != nil {
 				s.logger.Error(fmt.Sprintf("Error adding lease %s: %v", mac, err))
 			}
-
 		}
 	}
 
-	// Handle stale clients only if deletion is not preserved
-	if !s.preserveDeletedHosts {
-		if s.debug {
-			s.logger.Info("Checking for stale clients")
-		}
-
-		for mac, client := range currentClientsMap {
-			if !processedMACs[mac] {
-				action := fmt.Sprintf("Removing stale client %s (%s)", client.Name, mac)
-				if s.dryRun {
-					s.logger.Info("DRY-RUN: " + action)
-					continue
-				}
-
-				if s.debug {
-					s.logger.Info(fmt.Sprintf("Found stale client - MAC: %s, Name: %s", mac, client.Name))
-				}
-
-				s.logger.Info(action)
-				if err := s.adguard.RemoveClient(client.Name); err != nil {
-					s.logger.Error(fmt.Sprintf("Error removing stale client %s: %v", mac, err))
-				}
-			}
-		}
-	} else if s.debug {
-		s.logger.Info("Skipping stale client removal (preserveDeletedHosts is enabled)")
+	// Handle stale clients
+	if err := s.handleStaleClients(currentClientsMap, processedMACs); err != nil {
+		s.logger.Error(fmt.Sprintf("Error handling stale clients: %v", err))
 	}
 
 	s.logger.Info("Sync completed")
 	return nil
 }
 
+func (s *SyncService) handleStaleClients(currentClients map[string]*adguard.Client, processedMACs map[string]bool) error {
+	if s.preserveDeletedHosts {
+		if s.debug {
+			s.logger.Info("Skipping stale client removal (preserveDeletedHosts is enabled)")
+		}
+		return nil
+	}
+
+	if s.debug {
+		s.logger.Info("Checking for stale clients")
+	}
+
+	for mac, client := range currentClients {
+		if !processedMACs[mac] {
+			action := fmt.Sprintf("Removing stale client %s (%s)", client.Name, mac)
+			if s.dryRun {
+				s.logger.Info("DRY-RUN: " + action)
+				continue
+			}
+
+			if s.debug {
+				s.logger.Info(fmt.Sprintf("Found stale client - MAC: %s, Name: %s", mac, client.Name))
+			}
+
+			s.logger.Info(action)
+			if err := s.adguard.RemoveClient(client.Name); err != nil {
+				return fmt.Errorf("removing stale client %s: %w", mac, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (s *SyncService) Run() error {
 	s.logger.Info("Starting DHCP to AdGuard Home sync service")
+
+	// Start the NDP Watcher
+	s.ndpWatcher.Start()
 
 	// Convert to absolute path
 	absPath, err := filepath.Abs(s.leases.Path())
@@ -398,15 +512,15 @@ func (s *SyncService) Run() error {
 	// Get the directory from the absolute path
 	leaseDir := filepath.Dir(absPath)
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Setting up watcher for directory: %s", leaseDir))
+		s.logger.Info(fmt.Sprintf("Setting up dhcpLeaseWatcher for directory: %s", leaseDir))
 	}
 
-	if err := s.watcher.Add(leaseDir); err != nil {
+	if err := s.dhcpLeaseWatcher.Add(leaseDir); err != nil {
 		return fmt.Errorf("watching lease directory: %w", err)
 	}
 
 	if s.debug {
-		s.logger.Info("File watcher setup complete")
+		s.logger.Info("File dhcpLeaseWatcher setup complete")
 	}
 
 	// Perform initial sync
@@ -420,7 +534,7 @@ func (s *SyncService) Run() error {
 	go func() {
 		for {
 			select {
-			case event, ok := <-s.watcher.Events:
+			case event, ok := <-s.dhcpLeaseWatcher.Events:
 				if !ok {
 					s.logger.Info("Watcher events channel closed")
 					return
@@ -465,7 +579,7 @@ func (s *SyncService) Run() error {
 					}
 				})
 
-			case err, ok := <-s.watcher.Errors:
+			case err, ok := <-s.dhcpLeaseWatcher.Errors:
 				if !ok {
 					s.logger.Info("Watcher errors channel closed")
 					return
@@ -489,9 +603,17 @@ func (s *SyncService) Stop() error {
 		s.logger.Info("Stop requested - shutting down sync service")
 	}
 	s.logger.Info("Stopping sync service")
+
+	// Stop NDP watcher first
+	s.ndpWatcher.Stop()
+
+	// Signal the main loop to stop
 	close(s.done)
-	if err := s.watcher.Close(); err != nil {
-		return fmt.Errorf("closing watcher: %w", err)
+
+	// Close the DHCP lease watcher
+	if err := s.dhcpLeaseWatcher.Close(); err != nil {
+		return fmt.Errorf("closing dhcp lease watcher: %w", err)
 	}
+
 	return nil
 }

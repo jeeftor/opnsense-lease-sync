@@ -1,25 +1,24 @@
-# Configuration for dhcp-adguard-sync
-
 # AdGuard Home credentials
-ADGUARD_USERNAME=admin
-ADGUARD_PASSWORD=changeme
-  
-  # AdGuard Home connection settings
-ADGUARD_URL=127.0.0.1:3000
-ADGUARD_SCHEME=http
-  
-  # DHCP lease file location
-DHCP_LEASE_PATH=/var/dhcpd/var/db/dhcpd.leases
+ADGUARD_USERNAME={{.Username}}
+ADGUARD_PASSWORD={{.Password}}
+
+# AdGuard Home connection settings
+ADGUARD_URL={{.AdGuardURL}}
+ADGUARD_SCHEME={{.Scheme}}
+
+# DHCP lease file location
+DHCP_LEASE_PATH={{.LeasePath}}
 
 # Optional settings
-#PRESERVE_DELETED_HOSTS=true
-#DEBUG=true
-#DRY_RUN=false
-#ADGUARD_TIMEOUT=10
+{{if .PreserveDeletedHosts}}PRESERVE_DELETED_HOSTS=true{{else}}#PRESERVE_DELETED_HOSTS=true{{end}}
+{{if .Debug}}DEBUG=true{{else}}#DEBUG=true{{end}}
+{{if .DryRun}}DRY_RUN=true{{else}}#DRY_RUN=false{{end}}
+ADGUARD_TIMEOUT={{.Timeout}}
 
 # Logging configuration
-#LOG_LEVEL=info
-#LOG_FILE=/var/log/dhcp-adguard-sync/sync.log
-#MAX_LOG_SIZE=100
-#MAX_BACKUPS=3
-#MAX_AGE=28
+LOG_LEVEL={{.LogLevel}}
+{{if .LogFile}}LOG_FILE={{.LogFile}}{{else}}#LOG_FILE=/var/log/dhcp-adguard-sync/sync.log{{end}}
+MAX_LOG_SIZE={{.MaxLogSize}}
+MAX_BACKUPS={{.MaxBackups}}
+MAX_AGE={{.MaxAge}}
+{{if .NoCompress}}NO_COMPRESS=true{{else}}#NO_COMPRESS=false{{end}}

@@ -18,9 +18,8 @@ DHCP_LEASE_PATH=/var/dhcpd/var/db/dhcpd.leases
 #ADGUARD_TIMEOUT=10
 
 # Logging configuration
-#LOG_LEVEL=info              # error, warn, info, debug
+#LOG_LEVEL=info
 #LOG_FILE=/var/log/dhcp-adguard-sync/sync.log
-#MAX_LOG_SIZE=100           # Maximum size in MB before rotation
-#MAX_BACKUPS=3             # Number of old log files to keep
-#MAX_AGE=28               # Days to keep old log files
-#NO_COMPRESS=false        # Set to true to disable log compression
+#MAX_LOG_SIZE=100
+#MAX_BACKUPS=3
+#MAX_AGE=28

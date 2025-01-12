@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# PROVIDE: dhcp_adguard_sync
+# REQUIRE: NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="dhcp_adguard_sync"
+rcvar="dhcp_adguard_sync_enable"
+dhcp_adguard_sync_command="/usr/local/bin/dhcp-adguard-sync"
+pidfile="/var/run/${name}.pid"
+command="/usr/sbin/daemon"
+command_args="-P ${pidfile} -r -f ${dhcp_adguard_sync_command} serve"
+
+load_rc_config $name
+: ${dhcp_adguard_sync_enable:="NO"}
+
+run_rc_command "$1"

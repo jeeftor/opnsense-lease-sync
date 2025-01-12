@@ -1,3 +1,4 @@
+// pkg/appConfig.go
 package pkg
 
 import "time"
@@ -7,11 +8,25 @@ type Config struct {
 	LeasePath            string
 	DryRun               bool
 	Logger               Logger
-	Username             string // Instead of B64Auth
+	Username             string
 	Password             string
-	Scheme               string        // Optional, defaults to "https"
-	Timeout              int           // Optional, defaults to 10 seconds
-	PreserveDeletedHosts bool          //  flag to control deletion behavior
-	Debug                bool          // Flag to control debuggin info
-	NDPUpdateInterval    time.Duration // Update interval
+	Scheme               string
+	Timeout              int
+	PreserveDeletedHosts bool
+	Debug                bool
+	NDPUpdateInterval    time.Duration
+
+	// Logging configuration
+	LogConfig LogConfig
+}
+
+// DefaultLogConfig returns the default logging configuration
+func DefaultLogConfig() LogConfig {
+	return LogConfig{
+		Level:      LogLevelInfo,
+		MaxSize:    100,  // 100 MB
+		MaxBackups: 3,    // Keep 3 backups
+		MaxAge:     28,   // 28 days
+		Compress:   true, // Compress old logs
+	}
 }

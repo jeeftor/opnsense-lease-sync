@@ -8,6 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/gmichels/adguard-client-go v0.11.0
 	github.com/spf13/cobra v1.8.1
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (

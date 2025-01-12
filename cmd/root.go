@@ -19,11 +19,19 @@ var (
 	timeout              int
 	preserveDeletedHosts bool
 	debug                bool
+
+	// Logging configuration
+	logLevel   string
+	logFile    string
+	maxLogSize int
+	maxBackups int
+	maxAge     int
+	noCompress bool
 )
 
 // rootCmd represents the base command
 var rootCmd = &cobra.Command{
-	Use:   "opnsense-lease-sync",
+	Use:   "dhcp-adguard-sync",
 	Short: "Sync ISC DHCP leases to AdGuard Home",
 	Long: `A service/CLI tool that synchronizes ISC DHCP leases from OPNsense
 to AdGuard Home, keeping client configurations in sync automatically.
@@ -59,6 +67,32 @@ that watches for lease file changes.`,
 			preserveDeletedHosts = envPreserve == "true" || envPreserve == "1"
 		}
 
+		// Check for logging environment variables
+		if envLogLevel := os.Getenv("LOG_LEVEL"); envLogLevel != "" && !cmd.Flags().Changed("log-level") {
+			logLevel = envLogLevel
+		}
+		if envLogFile := os.Getenv("LOG_FILE"); envLogFile != "" && !cmd.Flags().Changed("log-file") {
+			logFile = envLogFile
+		}
+		if envMaxSize := os.Getenv("MAX_LOG_SIZE"); envMaxSize != "" && !cmd.Flags().Changed("max-log-size") {
+			if size, err := strconv.Atoi(envMaxSize); err == nil {
+				maxLogSize = size
+			}
+		}
+		if envMaxBackups := os.Getenv("MAX_BACKUPS"); envMaxBackups != "" && !cmd.Flags().Changed("max-backups") {
+			if backups, err := strconv.Atoi(envMaxBackups); err == nil {
+				maxBackups = backups
+			}
+		}
+		if envMaxAge := os.Getenv("MAX_AGE"); envMaxAge != "" && !cmd.Flags().Changed("max-age") {
+			if age, err := strconv.Atoi(envMaxAge); err == nil {
+				maxAge = age
+			}
+		}
+		if envNoCompress := os.Getenv("NO_COMPRESS"); envNoCompress != "" && !cmd.Flags().Changed("no-compress") {
+			noCompress = envNoCompress == "true" || envNoCompress == "1"
+		}
+
 		// Validate required flags
 		if username == "" {
 			return fmt.Errorf("username is required. Set via --username flag or ADGUARD_USERNAME environment variable")
@@ -77,8 +111,15 @@ that watches for lease file changes.`,
 			return fmt.Errorf("scheme must be either 'http' or 'https'")
 		}
 
-		if envDebug := os.Getenv("DEBUG"); envDebug != "" && !cmd.Flags().Changed("debug") {
-			debug = envDebug == "true" || envDebug == "1"
+		// Validate log settings
+		if maxLogSize <= 0 {
+			return fmt.Errorf("max-log-size must be greater than 0")
+		}
+		if maxBackups < 0 {
+			return fmt.Errorf("max-backups cannot be negative")
+		}
+		if maxAge < 0 {
+			return fmt.Errorf("max-age cannot be negative")
 		}
 
 		return nil
@@ -104,22 +145,36 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&preserveDeletedHosts, "preserve-deleted-hosts", false, "Don't remove AdGuard clients when their DHCP leases expire")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Show debug info")
 
+	// Add logging flags
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Log level (error, warn, info, debug)")
+	rootCmd.PersistentFlags().StringVar(&logFile, "log-file", "", "Log file path (default: syslog for service, stdout for CLI)")
+	rootCmd.PersistentFlags().IntVar(&maxLogSize, "max-log-size", 100, "Maximum log file size in megabytes before rotation")
+	rootCmd.PersistentFlags().IntVar(&maxBackups, "max-backups", 3, "Maximum number of old log files to retain")
+	rootCmd.PersistentFlags().IntVar(&maxAge, "max-age", 28, "Maximum number of days to retain old log files")
+	rootCmd.PersistentFlags().BoolVar(&noCompress, "no-compress", false, "Disable compression of old log files")
+
 	// Add flag usage examples to help text
 	rootCmd.Example = `  # Run with username and password
-  opnsense-lease-sync sync --username admin --password mypassword
+  dhcp-adguard-sync sync --username admin --password mypassword
 
   # Run with environment variables
   export ADGUARD_USERNAME=admin
   export ADGUARD_PASSWORD=mypassword
-  opnsense-lease-sync sync
+  dhcp-adguard-sync sync
 
   # Run as a service with custom settings
-  opnsense-lease-sync serve \
+  dhcp-adguard-sync serve \
     --username admin \
     --password mypassword \
     --adguard-url 192.168.1.1:3000 \
     --scheme https \
-    --preserve-deleted-hosts`
+    --preserve-deleted-hosts
+
+  # Run with custom logging
+  dhcp-adguard-sync serve \
+    --log-file /var/log/dhcp-adguard-sync/sync.log \
+    --log-level debug \
+    --max-log-size 50`
 
 	// Mark required flags
 	rootCmd.MarkPersistentFlagRequired("username")

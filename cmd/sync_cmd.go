@@ -1,4 +1,4 @@
-// cmd/sync.go
+// cmd/sync_cmd.go
 package cmd
 
 import (
@@ -15,7 +15,18 @@ var syncCmd = &cobra.Command{
 	Long: `Performs a single synchronization of DHCP leases to AdGuard Home
 and then exits. This is useful for testing or manual synchronization.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logger, err := pkg.NewLogger()
+		// Create log configuration
+		logConfig := pkg.LogConfig{
+			Level:      pkg.ParseLogLevel(logLevel),
+			FilePath:   logFile,
+			MaxSize:    maxLogSize,
+			MaxBackups: maxBackups,
+			MaxAge:     maxAge,
+			Compress:   !noCompress,
+		}
+
+		// Initialize logger
+		logger, err := pkg.NewLogger(logConfig)
 		if err != nil {
 			return fmt.Errorf("failed to initialize logger: %w", err)
 		}
@@ -30,6 +41,7 @@ and then exits. This is useful for testing or manual synchronization.`,
 			Timeout:    timeout,
 			Logger:     logger,
 			Debug:      debug,
+			LogConfig:  logConfig,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create service: %w", err)

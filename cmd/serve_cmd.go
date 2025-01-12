@@ -1,4 +1,4 @@
-// cmd/serve.go
+// cmd/serve_cmd.go
 package cmd
 
 import (
@@ -19,7 +19,18 @@ var serveCmd = &cobra.Command{
 and automatically syncs them to AdGuard Home. This is the recommended
 mode for production use.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logger, err := pkg.NewLogger()
+		// Create log configuration
+		logConfig := pkg.LogConfig{
+			Level:      pkg.ParseLogLevel(logLevel),
+			FilePath:   logFile,
+			MaxSize:    maxLogSize,
+			MaxBackups: maxBackups,
+			MaxAge:     maxAge,
+			Compress:   !noCompress,
+		}
+
+		// Initialize logger
+		logger, err := pkg.NewLogger(logConfig)
 		if err != nil {
 			return fmt.Errorf("failed to initialize logger: %w", err)
 		}
@@ -33,8 +44,9 @@ mode for production use.`,
 			Scheme:               scheme,
 			Timeout:              timeout,
 			Logger:               logger,
-			PreserveDeletedHosts: preserveDeletedHosts, // Add this if you want to expose it as a flag
+			PreserveDeletedHosts: preserveDeletedHosts,
 			Debug:                debug,
+			LogConfig:            logConfig,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create service: %w", err)
@@ -62,7 +74,4 @@ mode for production use.`,
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	// If you want to add preserve-deleted-hosts flag only for serve command
-	serveCmd.Flags().BoolVar(&preserveDeletedHosts, "preserve-deleted-hosts", false,
-		"Don't remove AdGuard clients when their DHCP leases expire")
 }

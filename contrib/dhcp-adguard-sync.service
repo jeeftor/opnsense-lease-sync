@@ -3,9 +3,10 @@ Description=DHCP to AdGuard Home Sync Service
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/dhcp-adguard-sync
+ExecStart=/usr/bin/dhcp-adguard-sync serve
 Restart=always
 User=root
+EnvironmentFile=/etc/dhcp-adguard-sync/config.yaml
 
 [Install]
 WantedBy=multi-user.target

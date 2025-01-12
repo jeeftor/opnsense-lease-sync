@@ -1,0 +1,10 @@
+# Configuration for dhcp-adguard-sync
+ADGUARD_USERNAME=admin
+ADGUARD_PASSWORD=changeme
+ADGUARD_URL=127.0.0.1:3000
+ADGUARD_SCHEME=http
+DHCP_LEASE_PATH=/var/dhcpd/var/db/dhcpd.leases
+#PRESERVE_DELETED_HOSTS=true
+#DEBUG=true
+#DRY_RUN=false
+#ADGUARD_TIMEOUT=10

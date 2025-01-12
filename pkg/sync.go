@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"os"
@@ -186,7 +187,7 @@ func (s *SyncService) addClientWithRetry(action *AdguardUpdateAction) error {
 
 func (s *SyncService) updateClient(existingClient *adguard.Client, action *AdguardUpdateAction) error {
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Attempting to update client - MAC: %s, Current name: %s, New name: %s",
+		s.logger.Info(fmt.Sprintf("[%s] Attempting to update client, Current name: %s, Hostname: %s",
 			action.MAC, existingClient.Name, action.Hostname))
 	}
 
@@ -201,20 +202,29 @@ func (s *SyncService) updateClient(existingClient *adguard.Client, action *Adgua
 		Name: existingClient.Name,
 		Data: updatedClient,
 	}
+	clientUpdate.Data.Name = existingClient.Name
+	clientUpdate.Name = existingClient.Name
 
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Updating: %s", hostname))
+		s.logger.Info(fmt.Sprintf("[%s] Updating: %s (%s)", action.MAC, hostname, existingClient.Name))
 	}
 
 	_, err := s.adguard.client.UpdateClient(clientUpdate)
 	if err == nil {
 		if s.debug {
-			s.logger.Info(fmt.Sprintf("Successfully updated client"))
+			s.logger.Info(fmt.Sprintf("[%s] Successfully updated client", action.MAC))
 		}
 		return nil
 	}
 
-	return fmt.Errorf("failed to update client: %v", err)
+	// Fail case decode what we sent maybe
+	rb, err := json.Marshal(clientUpdate)
+	if err != nil {
+		return fmt.Errorf("[%s] failed to update client: %v", action.MAC, err)
+	}
+	s.logger.Error(fmt.Sprintf("Request body: %s", string(rb)))
+
+	return fmt.Errorf("[%s] failed to update client: %v", action.MAC, err)
 }
 
 //func (s *SyncService) handleLeaseUpdate(existingClient *adguard.Client, lease ISCDHCPLease, mac string) error {

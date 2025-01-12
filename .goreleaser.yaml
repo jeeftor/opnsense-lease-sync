@@ -19,7 +19,6 @@ builds:
       - -X main.version={{.Version}}
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
-    # Remove the ignore block that was preventing FreeBSD amd64 builds
 
 archives:
   - id: standard
@@ -36,6 +35,55 @@ archives:
     files:
       - README*
       - LICENSE*
+
+nfpms:
+  - id: dhcp-adguard-sync
+    package_name: dhcp-adguard-sync
+    file_name_template: >-
+      {{ .PackageName }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}aarch64
+      {{- else }}{{ .Arch }}{{ end }}_
+      {{- .Version }}
+
+    vendor: yourusername
+    homepage: https://github.com/yourusername/dhcp-adguard-sync
+    maintainer: Your Name <your.email@example.com>
+    description: Sync DHCP leases from OPNsense to AdGuard Home
+    license: MIT
+
+    formats:
+      - deb
+      - rpm
+
+    contents:
+      - src: ./contrib/config.yaml
+        dst: /etc/dhcp-adguard-sync/config.yaml
+        type: config|noreplace
+        file_info:
+          mode: 0600
+          owner: root
+          group: root
+
+      - src: ./contrib/dhcp-adguard-sync.service
+        dst: /lib/systemd/system/dhcp-adguard-sync.service
+        file_info:
+          mode: 0644
+          owner: root
+          group: root
+
+    scripts:
+      postinstall: ./contrib/scripts/postinstall.sh
+      preremove: ./contrib/scripts/preremove.sh
+      postremove: ./contrib/scripts/postremove.sh
+
+    overrides:
+      deb:
+        dependencies:
+          - systemd
+      rpm:
+        dependencies:
+          - systemd
 
 checksum:
   name_template: 'checksums.txt'

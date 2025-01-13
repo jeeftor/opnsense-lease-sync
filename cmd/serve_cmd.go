@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -35,6 +36,17 @@ mode for production use.`,
 			return fmt.Errorf("failed to initialize logger: %w", err)
 		}
 
+		// Create a context that we'll cancel on shutdown
+		_, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Set up signal handling
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+		// Create error channel for service errors
+		errChan := make(chan error, 1)
+
 		syncService, err := pkg.NewSyncService(pkg.Config{
 			AdGuardURL:           adguardURL,
 			LeasePath:            leasePath,
@@ -52,26 +64,45 @@ mode for production use.`,
 			return fmt.Errorf("failed to create service: %w", err)
 		}
 
-		// Set up signal handling for graceful shutdown
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		// Start service in a goroutine
+		go func() {
+			logger.Info("Starting service...")
+			if err := syncService.Run(); err != nil {
+				logger.Error(fmt.Sprintf("Service error: %v", err))
+				errChan <- err
+			}
+		}()
 
-		if err := syncService.Run(); err != nil {
+		// Wait for either:
+		// - A signal (SIGINT/SIGTERM)
+		// - An error from the service
+		select {
+		case sig := <-sigChan:
+			logger.Info(fmt.Sprintf("Received signal: %v", sig))
+			logger.Info("Initiating graceful shutdown...")
+
+			// Cancel context to notify service to stop
+			cancel()
+
+			// Call Stop() to cleanup
+			if err := syncService.Stop(); err != nil {
+				logger.Error(fmt.Sprintf("Error during shutdown: %v", err))
+				return fmt.Errorf("error stopping service: %w", err)
+			}
+
+			logger.Info("Service stopped successfully")
+			return nil
+
+		case err := <-errChan:
+			logger.Error(fmt.Sprintf("Service failed: %v", err))
 			return fmt.Errorf("service failed: %w", err)
 		}
-
-		// Wait for shutdown signal
-		<-sigChan
-		logger.Info("Shutting down...")
-
-		if err := syncService.Stop(); err != nil {
-			return fmt.Errorf("error stopping service: %w", err)
-		}
-
-		return nil
 	},
 }
 
 func init() {
+	serveCmd.MarkFlagRequired("username")
+	serveCmd.MarkFlagRequired("password")
+
 	rootCmd.AddCommand(serveCmd)
 }

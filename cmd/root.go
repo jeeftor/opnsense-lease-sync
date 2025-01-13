@@ -29,6 +29,32 @@ var (
 	noCompress bool
 )
 
+// validateAdGuardFlags checks AdGuard-specific flags
+func validateAdGuardFlags(cmd *cobra.Command) error {
+	// Skip validation for commands that don't need AdGuard credentials
+	if cmd.Name() == "install" || cmd.Name() == "uninstall" {
+		return nil
+	}
+
+	// Check for environment variables
+	if envUser := os.Getenv("ADGUARD_USERNAME"); envUser != "" && !cmd.Flags().Changed("username") {
+		username = envUser
+	}
+	if envPass := os.Getenv("ADGUARD_PASSWORD"); envPass != "" && !cmd.Flags().Changed("password") {
+		password = envPass
+	}
+
+	// Validate required flags for AdGuard interaction
+	if username == "" {
+		return fmt.Errorf("username is required for %s command. Set via --username flag or ADGUARD_USERNAME environment variable", cmd.Name())
+	}
+	if password == "" {
+		return fmt.Errorf("password is required for %s command. Set via --password flag or ADGUARD_PASSWORD environment variable", cmd.Name())
+	}
+
+	return nil
+}
+
 // rootCmd represents the base command
 var rootCmd = &cobra.Command{
 	Use:   "dhcp-adguard-sync",
@@ -39,13 +65,7 @@ to AdGuard Home, keeping client configurations in sync automatically.
 Can be run either as a one-time sync (CLI mode) or as a persistent service
 that watches for lease file changes.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Check for environment variables
-		if envUser := os.Getenv("ADGUARD_USERNAME"); envUser != "" && !cmd.Flags().Changed("username") {
-			username = envUser
-		}
-		if envPass := os.Getenv("ADGUARD_PASSWORD"); envPass != "" && !cmd.Flags().Changed("password") {
-			password = envPass
-		}
+		// Check for other environment variables
 		if envURL := os.Getenv("ADGUARD_URL"); envURL != "" && !cmd.Flags().Changed("adguard-url") {
 			adguardURL = envURL
 		}
@@ -93,25 +113,20 @@ that watches for lease file changes.`,
 			noCompress = envNoCompress == "true" || envNoCompress == "1"
 		}
 
-		// Validate required flags
-		if username == "" {
-			return fmt.Errorf("username is required. Set via --username flag or ADGUARD_USERNAME environment variable")
-		}
-		if password == "" {
-			return fmt.Errorf("password is required. Set via --password flag or ADGUARD_PASSWORD environment variable")
+		// Validate AdGuard flags conditionally
+		if err := validateAdGuardFlags(cmd); err != nil {
+			return err
 		}
 
-		// Validate timeout
+		// Always validate other settings
 		if timeout <= 0 {
 			return fmt.Errorf("timeout must be greater than 0")
 		}
 
-		// Validate scheme
 		if scheme != "http" && scheme != "https" {
 			return fmt.Errorf("scheme must be either 'http' or 'https'")
 		}
 
-		// Validate log settings
 		if maxLogSize <= 0 {
 			return fmt.Errorf("max-log-size must be greater than 0")
 		}
@@ -153,30 +168,5 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&maxAge, "max-age", 28, "Maximum number of days to retain old log files")
 	rootCmd.PersistentFlags().BoolVar(&noCompress, "no-compress", false, "Disable compression of old log files")
 
-	// Add flag usage examples to help text
-	rootCmd.Example = `  # Run with username and password
-  dhcp-adguard-sync sync --username admin --password mypassword
-
-  # Run with environment variables
-  export ADGUARD_USERNAME=admin
-  export ADGUARD_PASSWORD=mypassword
-  dhcp-adguard-sync sync
-
-  # Run as a service with custom settings
-  dhcp-adguard-sync serve \
-    --username admin \
-    --password mypassword \
-    --adguard-url 192.168.1.1:3000 \
-    --scheme https \
-    --preserve-deleted-hosts
-
-  # Run with custom logging
-  dhcp-adguard-sync serve \
-    --log-file /var/log/dhcp-adguard-sync/sync.log \
-    --log-level debug \
-    --max-log-size 50`
-
-	// Mark required flags
-	rootCmd.MarkPersistentFlagRequired("username")
-	rootCmd.MarkPersistentFlagRequired("password")
+	// Note: Required flags are now handled per-command in validateAdGuardFlags
 }

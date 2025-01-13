@@ -185,6 +185,9 @@ Use --dry-run to preview what would be written without making any changes.`,
 func init() {
 	rootCmd.AddCommand(installCmd)
 
+	serveCmd.MarkFlagRequired("username")
+	serveCmd.MarkFlagRequired("password")
+
 	// Add dry-run flag
 	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Show what would be installed without making any changes")
 }

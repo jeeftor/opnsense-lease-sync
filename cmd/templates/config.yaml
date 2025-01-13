@@ -1,24 +1,24 @@
 # AdGuard Home credentials
-ADGUARD_USERNAME={{.Username}}
-ADGUARD_PASSWORD={{.Password}}
-
-# AdGuard Home connection settings
-ADGUARD_URL={{.AdGuardURL}}
-ADGUARD_SCHEME={{.Scheme}}
-
-# DHCP lease file location
-DHCP_LEASE_PATH={{.LeasePath}}
-
-# Optional settings
-{{if .PreserveDeletedHosts}}PRESERVE_DELETED_HOSTS=true{{else}}#PRESERVE_DELETED_HOSTS=true{{end}}
-{{if .Debug}}DEBUG=true{{else}}#DEBUG=true{{end}}
-{{if .DryRun}}DRY_RUN=true{{else}}#DRY_RUN=false{{end}}
-ADGUARD_TIMEOUT={{.Timeout}}
-
-# Logging configuration
-LOG_LEVEL={{.LogLevel}}
-{{if .LogFile}}LOG_FILE={{.LogFile}}{{else}}#LOG_FILE=/var/log/dhcp-adguard-sync/sync.log{{end}}
-MAX_LOG_SIZE={{.MaxLogSize}}
-MAX_BACKUPS={{.MaxBackups}}
-MAX_AGE={{.MaxAge}}
-{{if .NoCompress}}NO_COMPRESS=true{{else}}#NO_COMPRESS=false{{end}}
+ADGUARD_USERNAME="{{.Username}}"
+ADGUARD_PASSWORD="{{.Password}}"
+  
+  # AdGuard Home connection settings
+ADGUARD_URL="{{.AdGuardURL}}"
+ADGUARD_SCHEME="{{.Scheme}}"
+  
+  # DHCP lease file location
+DHCP_LEASE_PATH="{{.LeasePath}}"
+  
+  # Optional settings
+{{if .PreserveDeletedHosts}}PRESERVE_DELETED_HOSTS="true"{{else}}#PRESERVE_DELETED_HOSTS="false"{{end}}
+{{if .Debug}}DEBUG="true"{{else}}#DEBUG="false"{{end}}
+{{if .DryRun}}DRY_RUN="true"{{else}}#DRY_RUN="false"{{end}}
+ADGUARD_TIMEOUT="{{.Timeout}}"
+  
+  # Logging configuration
+LOG_LEVEL="{{.LogLevel}}"
+{{if .LogFile}}LOG_FILE="{{.LogFile}}"{{else}}#LOG_FILE="/var/log/dhcp-adguard-sync/sync.log"{{end}}
+MAX_LOG_SIZE="{{.MaxLogSize}}"
+MAX_BACKUPS="{{.MaxBackups}}"
+MAX_AGE="{{.MaxAge}}"
+{{if .NoCompress}}NO_COMPRESS="true"{{else}}#NO_COMPRESS="false"{{end}}

@@ -57,5 +57,8 @@ and then exits. This is useful for testing or manual synchronization.`,
 }
 
 func init() {
+	serveCmd.MarkFlagRequired("username")
+	serveCmd.MarkFlagRequired("password")
+
 	rootCmd.AddCommand(syncCmd)
 }

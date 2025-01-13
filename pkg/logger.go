@@ -1,4 +1,3 @@
-// pkg/logger.go
 package pkg
 
 import (
@@ -12,6 +11,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// LogLevel represents the severity of a log message
 type LogLevel int
 
 const (
@@ -21,6 +21,7 @@ const (
 	LogLevelDebug
 )
 
+// String returns the string representation of the log level
 func (l LogLevel) String() string {
 	switch l {
 	case LogLevelError:
@@ -36,6 +37,7 @@ func (l LogLevel) String() string {
 	}
 }
 
+// ParseLogLevel converts a string to LogLevel
 func ParseLogLevel(level string) LogLevel {
 	switch strings.ToUpper(level) {
 	case "ERROR":
@@ -51,6 +53,7 @@ func ParseLogLevel(level string) LogLevel {
 	}
 }
 
+// Logger defines the interface for logging operations
 type Logger interface {
 	Error(msg string)
 	Warn(msg string)
@@ -59,115 +62,125 @@ type Logger interface {
 }
 
 type LogConfig struct {
-	// Log level (ERROR, WARN, INFO, DEBUG)
-	Level LogLevel
-	// Optional file path for logging to file
-	FilePath string
-	// Log rotation settings
-	MaxSize    int  // megabytes
-	MaxBackups int  // number of backups
-	MaxAge     int  // days
-	Compress   bool // compress old logs
+	Level          LogLevel
+	FilePath       string
+	SyslogFacility string
+	MaxSize        int
+	MaxBackups     int
+	MaxAge         int
+	Compress       bool
 }
 
-type ServiceLogger struct {
-	syslog *syslog.Writer
-	level  LogLevel
-}
-
-type FileLogger struct {
-	logger *log.Logger
-	level  LogLevel
+type DualLogger struct {
+	fileLogger *log.Logger
+	sysLogger  *syslog.Writer
+	level      LogLevel
+	rotator    *lumberjack.Logger
 }
 
 func NewLogger(cfg LogConfig) (Logger, error) {
-	// If running as a daemon, use syslog unless file logging is explicitly configured
-	if os.Getppid() == 1 && cfg.FilePath == "" {
-		syslogWriter, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "dhcp-adguard-sync")
-		if err != nil {
-			return nil, fmt.Errorf("initializing syslog: %w", err)
-		}
-		return &ServiceLogger{
-			syslog: syslogWriter,
-			level:  cfg.Level,
-		}, nil
+	var dl DualLogger
+	dl.level = cfg.Level
+
+	// Default to local3 facility if not specified
+	facility := cfg.SyslogFacility
+	if facility == "" {
+		facility = "local3"
 	}
 
-	// If file path is specified, use file logging with rotation
-	if cfg.FilePath != "" {
-		// Ensure directory exists
-		if err := os.MkdirAll(filepath.Dir(cfg.FilePath), 0755); err != nil {
-			return nil, fmt.Errorf("creating log directory: %w", err)
-		}
+	// Setup syslog first
+	priority := syslog.LOG_INFO | getFacility(facility)
+	sysLogger, err := syslog.New(priority, "dhcp-adguard-sync")
+	if err != nil {
+		return nil, fmt.Errorf("initializing syslog: %w", err)
+	}
+	dl.sysLogger = sysLogger
 
-		// Configure log rotation
-		rotator := &lumberjack.Logger{
-			Filename:   cfg.FilePath,
-			MaxSize:    cfg.MaxSize,    // megabytes
-			MaxBackups: cfg.MaxBackups, // number of backups
-			MaxAge:     cfg.MaxAge,     // days
-			Compress:   cfg.Compress,   // compress old logs
-		}
-
-		logger := log.New(rotator, "", log.LstdFlags)
-		return &FileLogger{
-			logger: logger,
-			level:  cfg.Level,
-		}, nil
+	// If no file path specified, default to OPNsense location
+	if cfg.FilePath == "" {
+		cfg.FilePath = "/var/log/dhcp-adguard-sync.log"
 	}
 
-	// Default to stdout for CLI usage
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-	return &FileLogger{
-		logger: logger,
-		level:  cfg.Level,
-	}, nil
+	// Ensure log directory exists with correct permissions
+	logDir := filepath.Dir(cfg.FilePath)
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return nil, fmt.Errorf("creating log directory: %w", err)
+	}
+
+	// Setup file logging with rotation
+	dl.rotator = &lumberjack.Logger{
+		Filename:   cfg.FilePath,
+		MaxSize:    cfg.MaxSize,
+		MaxBackups: cfg.MaxBackups,
+		MaxAge:     cfg.MaxAge,
+		Compress:   cfg.Compress,
+	}
+
+	// Create file logger
+	dl.fileLogger = log.New(dl.rotator, "", log.LstdFlags)
+
+	return &dl, nil
 }
 
-// ServiceLogger implementation
-func (l *ServiceLogger) Error(msg string) {
-	if l.level >= LogLevelError {
-		l.syslog.Err(msg)
-	}
-}
-
-func (l *ServiceLogger) Warn(msg string) {
-	if l.level >= LogLevelWarn {
-		l.syslog.Warning(msg)
-	}
-}
-
-func (l *ServiceLogger) Info(msg string) {
-	if l.level >= LogLevelInfo {
-		l.syslog.Info(msg)
-	}
-}
-
-func (l *ServiceLogger) Debug(msg string) {
-	if l.level >= LogLevelDebug {
-		l.syslog.Debug(msg)
-	}
-}
-
-// FileLogger implementation
-func (l *FileLogger) log(level LogLevel, msg string) {
+func (l *DualLogger) log(level LogLevel, msg string) {
 	if l.level >= level {
-		l.logger.Output(2, fmt.Sprintf("[%s] %s", level, msg))
+		// Always log to file if we have one
+		if l.fileLogger != nil {
+			l.fileLogger.Output(2, fmt.Sprintf("[%s] %s", level, msg))
+		}
+
+		// Also log to syslog with appropriate level
+		if l.sysLogger != nil {
+			switch level {
+			case LogLevelError:
+				l.sysLogger.Err(msg)
+			case LogLevelWarn:
+				l.sysLogger.Warning(msg)
+			case LogLevelInfo:
+				l.sysLogger.Info(msg)
+			case LogLevelDebug:
+				l.sysLogger.Debug(msg)
+			}
+		}
 	}
 }
 
-func (l *FileLogger) Error(msg string) {
+func (l *DualLogger) Error(msg string) {
 	l.log(LogLevelError, msg)
 }
 
-func (l *FileLogger) Warn(msg string) {
+func (l *DualLogger) Warn(msg string) {
 	l.log(LogLevelWarn, msg)
 }
 
-func (l *FileLogger) Info(msg string) {
+func (l *DualLogger) Info(msg string) {
 	l.log(LogLevelInfo, msg)
 }
 
-func (l *FileLogger) Debug(msg string) {
+func (l *DualLogger) Debug(msg string) {
 	l.log(LogLevelDebug, msg)
+}
+
+// getFacility converts a facility string to syslog.Priority
+func getFacility(facility string) syslog.Priority {
+	switch strings.ToLower(facility) {
+	case "local0":
+		return syslog.LOG_LOCAL0
+	case "local1":
+		return syslog.LOG_LOCAL1
+	case "local2":
+		return syslog.LOG_LOCAL2
+	case "local3":
+		return syslog.LOG_LOCAL3
+	case "local4":
+		return syslog.LOG_LOCAL4
+	case "local5":
+		return syslog.LOG_LOCAL5
+	case "local6":
+		return syslog.LOG_LOCAL6
+	case "local7":
+		return syslog.LOG_LOCAL7
+	default:
+		return syslog.LOG_LOCAL3 // Default to local3
+	}
 }

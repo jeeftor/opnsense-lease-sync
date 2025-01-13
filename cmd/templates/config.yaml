@@ -15,9 +15,10 @@ DHCP_LEASE_PATH="{{.LeasePath}}"
 {{if .DryRun}}DRY_RUN="true"{{else}}#DRY_RUN="false"{{end}}
 ADGUARD_TIMEOUT="{{.Timeout}}"
   
-  # Logging configuration
+  # Logging configuration - OPNsense optimized
 LOG_LEVEL="{{.LogLevel}}"
-{{if .LogFile}}LOG_FILE="{{.LogFile}}"{{else}}#LOG_FILE="/var/log/dhcp-adguard-sync/sync.log"{{end}}
+LOG_FILE="/var/log/dhcp-adguard-sync.log"
+SYSLOG_FACILITY="local3"
 MAX_LOG_SIZE="{{.MaxLogSize}}"
 MAX_BACKUPS="{{.MaxBackups}}"
 MAX_AGE="{{.MaxAge}}"

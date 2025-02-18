@@ -28,7 +28,7 @@ Or you can try something like the following.
 #!/bin/sh
 
 # Set variables using uname
-OS=$(uname -s)
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 REPO="jeeftor/opnsense-lease-sync"
 

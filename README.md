@@ -25,21 +25,34 @@ A service that synchronizes DHCP leases from OPNsense to AdGuard Home, ensuring 
 Or you can try something like the following.
 
 ```bash
-/bin/sh
+#!/bin/sh
 
-# Set variables
-OS="Freebsd"
+# Set variables using uname
+OS=$(uname -s)
 ARCH=$(uname -m)
 REPO="jeeftor/opnsense-lease-sync"
+
+# Fetch latest release version from GitHub API
 VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
-URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar.gz"
+# Check if version was successfully retrieved
+if [ -z "$VERSION" ]; then
+    echo "Failed to fetch latest version"
+    exit 1
+fi
 
-curl -L -o /tmp/dhcp-adguard-sync.tar.gz $URL
-tar /tmp/xzf dhcp-adguard-sync.tar.gz
+echo "Found version: ${VERSION}"
+
+# Construct download URL (using .tar)
+URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar"
+
+# Download and extract
+echo "Downloading from: ${URL}"
+curl -L -o /tmp/dhcp-adguard-sync.tar "$URL"
+tar xf /tmp/dhcp-adguard-sync.tar -C /tmp
 
 # Clean up
-rm /tmp/dhcp-adguard-sync.tar.gz
+rm /tmp/dhcp-adguard-sync.tar
 ```
 
 

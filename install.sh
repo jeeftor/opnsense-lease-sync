@@ -5,7 +5,8 @@ set -e  # Exit on any error
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 REPO="jeeftor/opnsense-lease-sync"
-INSTALL_DIR="/usr/local/bin"
+TEMP_DIR="/tmp/dhcp-adguard-sync-install"
+BINARY_NAME="dhcp-adguard-sync"
 
 # Fetch latest release version from GitHub API
 VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
@@ -18,24 +19,25 @@ fi
 
 echo "Found version: ${VERSION}"
 
+# Create temp directory
+mkdir -p "${TEMP_DIR}"
+
 # Construct download URL (using .tar)
 URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar"
 
-# Download and extract
+# Download and extract to temp directory
 echo "Downloading from: ${URL}"
-curl -L -o /tmp/dhcp-adguard-sync.tar "$URL"
+curl -L -o "${TEMP_DIR}/dhcp-adguard-sync.tar" "$URL"
+tar xf "${TEMP_DIR}/dhcp-adguard-sync.tar" -C "${TEMP_DIR}"
 
-# Create install directory if it doesn't exist
-mkdir -p "${INSTALL_DIR}"
+# Make the binary executable
+chmod +x "${TEMP_DIR}/${BINARY_NAME}"
 
-# Extract directly to install directory
-echo "Installing to ${INSTALL_DIR}..."
-tar xf /tmp/dhcp-adguard-sync.tar -C "${INSTALL_DIR}"
-
-# Set executable permissions
-chmod +x "${INSTALL_DIR}/dhcp-adguard-sync"
+# Now run the binary's own install command
+echo "Running service installation..."
+"${TEMP_DIR}/${BINARY_NAME}" install "$@"
 
 # Clean up
-rm /tmp/dhcp-adguard-sync.tar
+rm -rf "${TEMP_DIR}"
 
-echo "Installation complete! The dhcp-adguard-sync binary is now available in ${INSTALL_DIR}"
+echo "Installation complete!"

@@ -23,7 +23,7 @@ A service that synchronizes DHCP leases from OPNsense to AdGuard Home, ensuring 
 1. Download the latest release from the releases page
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
 ```
 
 Or you can try something like the following.

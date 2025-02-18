@@ -22,6 +22,27 @@ A service that synchronizes DHCP leases from OPNsense to AdGuard Home, ensuring 
 
 1. Download the latest release from the releases page
 
+Or you can try something like the following.
+
+```bash
+/bin/sh
+
+# Set variables
+OS="Freebsd"
+ARCH=$(uname -m)
+REPO="jeeftor/opnsense-lease-sync"
+VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar.gz"
+
+curl -L -o /tmp/dhcp-adguard-sync.tar.gz $URL
+tar /tmp/xzf dhcp-adguard-sync.tar.gz
+
+# Clean up
+rm /tmp/dhcp-adguard-sync.tar.gz
+```
+
+
 2. Copy to your OPNsense system:
 ```bash
 scp dhcp-adguard-sync root@opnsense:/root/

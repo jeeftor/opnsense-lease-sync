@@ -28,7 +28,7 @@ archives:
       {{- .Os }}_
       {{- .Arch }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}_
-      {{- .Version }}
+      {{- "v" }}{{- .Version }}
     format: tar
     files:
       - README*

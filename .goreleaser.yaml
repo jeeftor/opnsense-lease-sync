@@ -22,12 +22,7 @@ builds:
 
 archives:
   - id: standard
-    name_template: >
-      {{ .ProjectName }}_
-      {{- .Os }}_
-      {{- .Arch }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}_
-      {{- "v" }}{{- .Version }}
+    name_template: '{{ .ProjectName }}_{{- .Os }}_{{- .Arch }}{{- if .Arm }}v{{ .Arm }}{{ end }}_{{- "v" }}{{- .Version }}'
     files:
       - README*
       - LICENSE*

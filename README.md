@@ -24,6 +24,32 @@ The application supports both ISC DHCP and DNSMasq lease formats, allowing you t
 
 ## Installation
 
+### Method 1: Using the Custom Repository (Recommended)
+
+1. SSH into your OPNsense firewall and run:
+
+```bash
+fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/repo-packages/repo/dhcpadguardsync.conf
+```
+
+2. Update the package cache:
+
+```bash
+pkg update
+```
+
+3. Install the plugin:
+
+```bash
+pkg install os-dhcpadguardsync
+```
+
+4. Access the plugin in the OPNsense web interface under **Services > DHCP AdGuard Sync**
+
+For more detailed instructions, see [INSTALL.md](INSTALL.md).
+
+### Method 2: Manual Installation
+
 1. Download the latest release from the releases page
 
 ```bash

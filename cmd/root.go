@@ -14,6 +14,7 @@ var (
 	password             string
 	adguardURL           string
 	leasePath            string
+	leaseFormat          string
 	dryRun               bool
 	scheme               string
 	timeout              int
@@ -71,6 +72,9 @@ that watches for lease file changes.`,
 		}
 		if envLease := os.Getenv("DHCP_LEASE_PATH"); envLease != "" && !cmd.Flags().Changed("lease-path") {
 			leasePath = envLease
+		}
+		if envLeaseFormat := os.Getenv("LEASE_FORMAT"); envLeaseFormat != "" && !cmd.Flags().Changed("lease-format") {
+			leaseFormat = envLeaseFormat
 		}
 		if envScheme := os.Getenv("ADGUARD_SCHEME"); envScheme != "" && !cmd.Flags().Changed("scheme") {
 			scheme = envScheme
@@ -154,6 +158,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&password, "password", "", "AdGuard Home password")
 	rootCmd.PersistentFlags().StringVar(&adguardURL, "adguard-url", "127.0.0.1:3000", "AdGuard Home host:port")
 	rootCmd.PersistentFlags().StringVar(&leasePath, "lease-path", "/var/dhcpd/var/db/dhcpd.leases", "Path to DHCP leases file")
+	rootCmd.PersistentFlags().StringVar(&leaseFormat, "lease-format", "isc", "DHCP lease file format (isc or dnsmasq)")
 	rootCmd.PersistentFlags().StringVar(&scheme, "scheme", "http", "Connection scheme (http/https)")
 	rootCmd.PersistentFlags().IntVar(&timeout, "timeout", 10, "API timeout in seconds")
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Dry run mode (print actions instead of executing)")

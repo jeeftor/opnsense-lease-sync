@@ -31,17 +31,26 @@ and then exits. This is useful for testing or manual synchronization.`,
 			return fmt.Errorf("failed to initialize logger: %w", err)
 		}
 
+		// Convert string lease format to LeaseFormat type
+		var leaseFormatType pkg.LeaseFormat
+		if leaseFormat == "dnsmasq" {
+			leaseFormatType = pkg.DNSMasqFormat
+		} else {
+			leaseFormatType = pkg.ISCDHCPFormat
+		}
+
 		syncService, err := pkg.NewSyncService(pkg.Config{
-			AdGuardURL: adguardURL,
-			LeasePath:  leasePath,
-			DryRun:     dryRun,
-			Username:   username,
-			Password:   password,
-			Scheme:     scheme,
-			Timeout:    timeout,
-			Logger:     logger,
-			Debug:      debug,
-			LogConfig:  logConfig,
+			AdGuardURL:  adguardURL,
+			LeasePath:   leasePath,
+			LeaseFormat: leaseFormatType,
+			DryRun:      dryRun,
+			Username:    username,
+			Password:    password,
+			Scheme:      scheme,
+			Timeout:     timeout,
+			Logger:      logger,
+			Debug:       debug,
+			LogConfig:   logConfig,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create service: %w", err)

@@ -37,9 +37,27 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 
 	}
 
+	// Create the appropriate lease reader based on the configured format
+	var leaseReader LeaseReader
+	
+	switch cfg.LeaseFormat {
+	case DNSMasqFormat:
+		leaseReader = NewDNSMasq(cfg.LeasePath)
+		if cfg.Debug {
+			cfg.Logger.Info("Using DNSMasq lease format")
+		}
+	case ISCDHCPFormat:
+		fallthrough
+	default:
+		leaseReader = NewDHCP(cfg.LeasePath)
+		if cfg.Debug {
+			cfg.Logger.Info("Using ISC DHCP lease format")
+		}
+	}
+	
 	service := &SyncService{
 		adguard:              adguardClient,
-		leases:               NewDHCP(cfg.LeasePath),
+		leases:               leaseReader,
 		logger:               cfg.Logger,
 		dhcpLeaseWatcher:     dhcpLeaseWatcher,
 		ndpWatcher:           ndpWatcher,
@@ -53,11 +71,11 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 
 	if service.debug {
 		service.logger.Info("Created new SyncService with config:")
-		service.logger.Info(fmt.Sprintf("- Lease path: %s", cfg.LeasePath))
-		service.logger.Info(fmt.Sprintf("- Dry run: %v", cfg.DryRun))
-		service.logger.Info(fmt.Sprintf("- Preserve deleted hosts: %v", cfg.PreserveDeletedHosts))
-		service.logger.Info(fmt.Sprintf("- Debug mode: enabled"))
-		service.logger.Info(fmt.Sprintf("- NDP update interval: %v", cfg.NDPUpdateInterval))
+		service.logger.Info("- Lease path: " + cfg.LeasePath)
+		service.logger.Info("- Dry run: " + fmt.Sprintf("%v", cfg.DryRun))
+		service.logger.Info("- Preserve deleted hosts: " + fmt.Sprintf("%v", cfg.PreserveDeletedHosts))
+		service.logger.Info("- Debug mode: enabled")
+		service.logger.Info("- NDP update interval: " + fmt.Sprintf("%v", cfg.NDPUpdateInterval))
 
 	}
 
@@ -504,14 +522,17 @@ func (s *SyncService) Run() error {
 	// Start the NDP Watcher
 	s.ndpWatcher.Start()
 
+	// Get the lease file path
+	path := s.leases.Path()
+	
 	// Convert to absolute path
-	absPath, err := filepath.Abs(s.leases.Path())
+	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return fmt.Errorf("getting absolute path: %w", err)
 	}
 
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Lease file absolute path: %s", absPath))
+		s.logger.Info("Lease file absolute path: " + absPath)
 	}
 
 	// Verify the lease file exists
@@ -522,9 +543,10 @@ func (s *SyncService) Run() error {
 	// Get the directory from the absolute path
 	leaseDir := filepath.Dir(absPath)
 	if s.debug {
-		s.logger.Info(fmt.Sprintf("Setting up dhcpLeaseWatcher for directory: %s", leaseDir))
+		s.logger.Info("Setting up watcher for directory: " + leaseDir)
 	}
 
+	// Add directory to watcher
 	if err := s.dhcpLeaseWatcher.Add(leaseDir); err != nil {
 		return fmt.Errorf("watching lease directory: %w", err)
 	}
@@ -561,10 +583,14 @@ func (s *SyncService) Run() error {
 					continue
 				}
 
-				if eventPath != absPath {
+				// Get absolute path of our lease file
+				leaseAbsPath, _ := filepath.Abs(s.leases.Path())
+
+				// Check if this is the lease file we're monitoring
+				if eventPath != leaseAbsPath {
 					if s.debug {
-						s.logger.Info(fmt.Sprintf("Ignoring event for non-target file - Event: %s, Target: %s",
-							eventPath, absPath))
+						s.logger.Info(fmt.Sprintf("Ignoring event for non-target file - Event: %s, Target: %s", 
+							eventPath, leaseAbsPath))
 					}
 					continue
 				}

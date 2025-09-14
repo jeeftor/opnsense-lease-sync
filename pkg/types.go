@@ -10,7 +10,7 @@ type DHCP struct {
 // SyncService represents the DHCP to AdGuard sync service
 type SyncService struct {
 	adguard              *AdGuard
-	leases               *DHCP
+	leases               LeaseReader
 	logger               Logger
 	dhcpLeaseWatcher     *fsnotify.Watcher
 	ndpWatcher           *NDPTableWatcher // New field for NDP watcher

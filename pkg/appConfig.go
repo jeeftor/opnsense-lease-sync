@@ -3,9 +3,18 @@ package pkg
 
 import "time"
 
+// LeaseFormat defines the type of DHCP lease file format
+type LeaseFormat string
+
+const (
+	ISCDHCPFormat  LeaseFormat = "isc"
+	DNSMasqFormat  LeaseFormat = "dnsmasq"
+)
+
 type Config struct {
 	AdGuardURL           string
 	LeasePath            string
+	LeaseFormat          LeaseFormat
 	DryRun               bool
 	Logger               Logger
 	Username             string

@@ -2,9 +2,13 @@
 
 A service that synchronizes DHCP leases from OPNsense to AdGuard Home, ensuring DNS resolution works correctly for all DHCP clients. It supports both IPv4 and IPv6 addresses through DHCP leases and NDP table monitoring.
 
+The application supports both ISC DHCP and DNSMasq lease formats, allowing you to choose which DHCP server's leases to synchronize with AdGuard Home. This ensures that all clients will be properly synchronized to AdGuard Home regardless of which DHCP server you're using.
+
 ## Features
 
 - Automatic synchronization of DHCP leases to AdGuard Home
+- Support for both ISC DHCP and DNSMasq lease formats (configurable)
+- OPNsense plugin with web UI for easy configuration
 - IPv6 support through NDP table monitoring
 - Real-time lease file monitoring
 - Support for hostname customization
@@ -32,8 +36,11 @@ scp dhcp-adguard-sync root@opnsense:/root/
 ssh root@opnsense
 cd /root
 chmod +x dhcp-adguard-sync
+# Install with support for both ISC DHCP and DNSMasq lease sources
 ./dhcp-adguard-sync install --username "your-adguard-username" --password "your-adguard-password"
 ```
+
+The installer will automatically configure the application to monitor both ISC DHCP and DNSMasq lease files.
 
 4. Start the service:
 ```bash
@@ -49,6 +56,17 @@ service dhcp-adguard-sync enable
 
 The configuration file is located at `/usr/local/etc/dhcp-adguard-sync/config.yaml`.
 
+### Lease Format Selection
+
+This application supports both ISC DHCP and DNSMasq lease formats:
+
+- Choose the lease format that matches your DHCP server configuration
+- The selected lease file is monitored for changes in real-time
+- When the file changes, a synchronization is triggered automatically
+- The application will parse the lease file according to the selected format
+
+This allows you to use the application with either ISC DHCP (the default in OPNsense) or DNSMasq, depending on your network configuration.
+
 Key configuration options:
 ```yaml
 # AdGuard Home credentials
@@ -58,6 +76,10 @@ ADGUARD_PASSWORD="password"
 # AdGuard Home connection settings
 ADGUARD_URL="127.0.0.1:3000"
 ADGUARD_SCHEME="http"
+
+# DHCP lease file configuration
+DHCP_LEASE_PATH="/var/dhcpd/var/db/dhcpd.leases"    # Path to the DHCP lease file
+LEASE_FORMAT="isc"                                  # Lease format: "isc" or "dnsmasq"
 
 # Optional settings
 #PRESERVE_DELETED_HOSTS="false"
@@ -107,10 +129,27 @@ grep dhcp-adguard-sync /var/log/messages
 
 ### Manual Sync
 
-To perform a one-time sync:
+To perform a one-time sync with ISC DHCP lease format (default):
 ```bash
-dhcp-adguard-sync sync --username "your-username" --password "your-password"
+dhcp-adguard-sync sync --username "your-username" --password "your-password" --lease-path "/var/dhcpd/var/db/dhcpd.leases"
 ```
+
+To perform a one-time sync with DNSMasq lease format:
+```bash
+dhcp-adguard-sync sync --username "your-username" --password "your-password" --lease-path "/var/db/dnsmasq.leases" --lease-format "dnsmasq"
+```
+
+The application will read the lease file using the specified format and synchronize all clients to AdGuard Home.
+
+### Command-Line Help
+
+For a complete list of available options:
+```bash
+dhcp-adguard-sync --help
+dhcp-adguard-sync sync --help
+```
+
+This will show all available options, including `--lease-path` for the lease file path and `--lease-format` to select between "isc" and "dnsmasq" formats.
 
 ## Uninstallation
 
@@ -148,7 +187,10 @@ service dhcp-adguard-sync status
 3. Common issues:
     - **Service won't start**: Check logs for permissions issues
     - **No synchronization**: Verify AdGuard credentials and connection settings
-    - **Missing clients**: Check if DHCP lease file path is correct
+    - **Missing clients**: Check if the lease file path is correct and the lease format matches your DHCP server:
+      - ISC DHCP lease file: `/var/dhcpd/var/db/dhcpd.leases` (default)
+      - DNSMasq lease file: `/var/db/dnsmasq.leases` (typical location)
+    - **Incorrect client information**: Ensure the lease format setting matches your DHCP server type
     - **IPv6 not working**: Ensure NDP table is accessible
 
 ## Contributing

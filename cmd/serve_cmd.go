@@ -47,9 +47,18 @@ mode for production use.`,
 		// Create error channel for service errors
 		errChan := make(chan error, 1)
 
+		// Convert string lease format to LeaseFormat type
+		var leaseFormatType pkg.LeaseFormat
+		if leaseFormat == "dnsmasq" {
+			leaseFormatType = pkg.DNSMasqFormat
+		} else {
+			leaseFormatType = pkg.ISCDHCPFormat
+		}
+
 		syncService, err := pkg.NewSyncService(pkg.Config{
 			AdGuardURL:           adguardURL,
 			LeasePath:            leasePath,
+			LeaseFormat:          leaseFormatType,
 			DryRun:               dryRun,
 			Username:             username,
 			Password:             password,

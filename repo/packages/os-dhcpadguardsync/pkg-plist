@@ -1,7 +1,0 @@
-/usr/local/etc/rc.d/opnsense-dhcpadguardsync
-/usr/local/sbin/dhcp-adguard-sync
-${LOCALBASE}/opnsense/mvc/app/controllers/OPNsense/DHCPAdGuardSync/Api/ServiceController.php
-${LOCALBASE}/opnsense/mvc/app/controllers/OPNsense/DHCPAdGuardSync/IndexController.php
-${LOCALBASE}/opnsense/mvc/app/models/OPNsense/DHCPAdGuardSync/DHCPAdGuardSync.xml
-${LOCALBASE}/opnsense/mvc/app/views/OPNsense/DHCPAdGuardSync/index.volt
-${LOCALBASE}/opnsense/service/conf/actions.d/actions_dhcpadguardsync.conf

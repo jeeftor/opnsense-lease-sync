@@ -24,97 +24,41 @@ The application supports both ISC DHCP and DNSMasq lease formats, allowing you t
 
 ## Installation
 
-### Method 1: Using the Custom Repository (Recommended)
+### Direct Installation (Recommended)
 
-1. SSH into your OPNsense firewall and run:
+1. SSH into your OPNsense firewall and download the latest release:
 
 ```bash
-fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/repo/dhcpadguardsync.conf
+fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v0.0.15
 ```
 
-2. Update the package cache:
+2. Make the binary executable:
 
 ```bash
-pkg update
+chmod +x /tmp/opnsense-lease-sync
 ```
 
 3. Install the plugin:
 
 ```bash
-pkg install os-dhcpadguardsync
+/tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
 ```
-
-4. Access the plugin in the OPNsense web interface under **Services > DHCP AdGuard Sync**
-
-For more detailed instructions, see [INSTALL.md](INSTALL.md).
-
-### Method 2: Manual Installation
-
-1. Download the latest release from the releases page
-
-```bash
-curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
-```
-
-Or you can try something like the following.
-
-```bash
-#!/bin/sh
-
-# Set variables using uname
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-REPO="jeeftor/opnsense-lease-sync"
-
-# Fetch latest release version from GitHub API
-VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-
-# Check if version was successfully retrieved
-if [ -z "$VERSION" ]; then
-    echo "Failed to fetch latest version"
-    exit 1
-fi
-
-echo "Found version: ${VERSION}"
-
-# Construct download URL (using .tar)
-URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar"
-
-# Download and extract
-echo "Downloading from: ${URL}"
-curl -L -o /tmp/dhcp-adguard-sync.tar "$URL"
-tar xf /tmp/dhcp-adguard-sync.tar -C /tmp
-
-# Clean up
-rm /tmp/dhcp-adguard-sync.tar
-```
-
-
-2. Copy to your OPNsense system:
-```bash
-scp dhcp-adguard-sync root@opnsense:/root/
-```
-
-3. SSH into your OPNsense system and install:
-```bash
-ssh root@opnsense
-cd /root
-chmod +x dhcp-adguard-sync
-# Install with support for both ISC DHCP and DNSMasq lease sources
-./dhcp-adguard-sync install --username "your-adguard-username" --password "your-adguard-password"
-```
-
-The installer will automatically configure the application to monitor both ISC DHCP and DNSMasq lease files.
 
 4. Start the service:
+
 ```bash
 service dhcp-adguard-sync start
 ```
 
 5. Enable at boot:
+
 ```bash
 service dhcp-adguard-sync enable
 ```
+
+6. Access the plugin in the OPNsense web interface under **Services > DHCP AdGuard Sync**
+
+For more detailed instructions, see [INSTALL.md](INSTALL.md).
 
 ## Configuration
 

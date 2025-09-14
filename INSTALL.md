@@ -1,39 +1,40 @@
 # Installing DHCP AdGuard Sync Plugin
 
-This document explains how to install the DHCP AdGuard Sync plugin on your OPNsense firewall using our custom repository.
+This document explains how to install the DHCP AdGuard Sync plugin on your OPNsense firewall.
 
-## Method 1: Using the Custom Repository (Recommended)
+## Method 1: Direct Installation (Recommended)
 
-### Step 1: Add the Repository
+### Step 1: Download the Latest Release
 
-SSH into your OPNsense firewall and run:
+SSH into your OPNsense firewall and download the latest release:
 
 ```bash
-fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/repo/dhcpadguardsync.conf
+fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v0.0.15
 ```
 
-### Step 2: Update Package Cache
+### Step 2: Make the Binary Executable
 
 ```bash
-pkg update
+chmod +x /tmp/opnsense-lease-sync
 ```
 
 ### Step 3: Install the Plugin
 
-You can install the plugin in two ways:
-
-#### Option A: Using the Command Line
-
 ```bash
-pkg install os-dhcpadguardsync
+/tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
 ```
 
-#### Option B: Using the OPNsense Web Interface
+### Step 4: Start the Service
 
-1. Navigate to **System > Firmware > Plugins**
-2. Click **Check for updates**
-3. Find **os-dhcpadguardsync** in the list
-4. Click **Install**
+```bash
+service dhcp-adguard-sync start
+```
+
+### Step 5: Enable at Boot
+
+```bash
+service dhcp-adguard-sync enable
+```
 
 ### Step 4: Configure the Plugin
 

@@ -111,12 +111,27 @@ The configuration file is located at `/usr/local/etc/dhcp-adguard-sync/config.ya
 
 This application supports both ISC DHCP and DNSMasq lease formats:
 
+- **Important**: DNSMasq is now the default DHCP server in OPNsense
 - Choose the lease format that matches your DHCP server configuration
 - The selected lease file is monitored for changes in real-time
 - When the file changes, a synchronization is triggered automatically
 - The application will parse the lease file according to the selected format
 
-This allows you to use the application with either ISC DHCP (the default in OPNsense) or DNSMasq, depending on your network configuration.
+#### DNSMasq Configuration (Default in OPNsense)
+
+If you're using DNSMasq (the default in current OPNsense versions), make sure to set:
+```yaml
+LEASE_FORMAT="dnsmasq"
+DHCP_LEASE_PATH="/var/db/dnsmasq.leases"
+```
+
+#### ISC DHCP Configuration (Legacy)
+
+If you're using the older ISC DHCP server:
+```yaml
+LEASE_FORMAT="isc"
+DHCP_LEASE_PATH="/var/dhcpd/var/db/dhcpd.leases"
+```
 
 Key configuration options:
 ```yaml
@@ -129,8 +144,8 @@ ADGUARD_URL="127.0.0.1:3000"
 ADGUARD_SCHEME="http"
 
 # DHCP lease file configuration
-DHCP_LEASE_PATH="/var/dhcpd/var/db/dhcpd.leases"    # Path to the DHCP lease file
-LEASE_FORMAT="isc"                                  # Lease format: "isc" or "dnsmasq"
+DHCP_LEASE_PATH="/var/db/dnsmasq.leases"            # Path to the DNSMasq lease file (default in OPNsense)
+LEASE_FORMAT="dnsmasq"                             # Lease format: "dnsmasq" or "isc"
 
 # Optional settings
 #PRESERVE_DELETED_HOSTS="false"

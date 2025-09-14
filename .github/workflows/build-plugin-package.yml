@@ -25,36 +25,36 @@ jobs:
           release: 13.2
           prepare: |
             pkg install -y git go gmake pkgconf
-            
+
       - name: Build Go binary
         run: |
           make build
-          
+
       - name: Create OPNsense plugin package
         run: |
           # Create package directory structure
           mkdir -p repo/FreeBSD:13:amd64/Latest
-          
+
           # Copy opnsense-plugin directory to a temporary location
           cp -r opnsense-plugin /tmp/os-dhcpadguardsync
-          
+
           # Copy the built binary to the plugin's files directory
           mkdir -p /tmp/os-dhcpadguardsync/src/opnsense/scripts
           cp build/opnsense-lease-sync /tmp/os-dhcpadguardsync/src/opnsense/scripts/
           chmod +x /tmp/os-dhcpadguardsync/src/opnsense/scripts/opnsense-lease-sync
-          
+
           # Create package
           cd /tmp
           pkg create -M os-dhcpadguardsync
-          
+
           # Copy package to repo
           cp /tmp/os-dhcpadguardsync-*.txz $GITHUB_WORKSPACE/repo/FreeBSD:13:amd64/Latest/
-          
+
       - name: Generate repository metadata
         run: |
           cd $GITHUB_WORKSPACE/repo
           pkg repo FreeBSD:13:amd64
-          
+
       - name: Create repository configuration file
         run: |
           cat > $GITHUB_WORKSPACE/repo/dhcpadguardsync.conf << EOF
@@ -64,39 +64,39 @@ jobs:
             priority: 50
           }
           EOF
-          
+
       - name: Create installation instructions
         run: |
           cat > $GITHUB_WORKSPACE/repo/README.md << EOF
           # DHCP AdGuard Sync Plugin Repository
-          
+
           To install this plugin on your OPNsense firewall:
-          
+
           1. SSH into your OPNsense system
           2. Run the following command:
-          
+
           \`\`\`bash
           fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/repo-packages/dhcpadguardsync.conf
           \`\`\`
-          
+
           3. Update the package cache:
-          
+
           \`\`\`bash
           pkg update
           \`\`\`
-          
+
           4. Install the plugin:
-          
+
           \`\`\`bash
           pkg install os-dhcpadguardsync
           \`\`\`
-          
+
           Alternatively, you can install through the OPNsense web interface:
           1. Navigate to System > Firmware > Plugins
           2. Click "Check for updates"
           3. Find "os-dhcpadguardsync" in the list and click "Install"
           EOF
-          
+
       - name: Deploy to repo-packages branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:

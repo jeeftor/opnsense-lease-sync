@@ -34,7 +34,7 @@ func (m *MultiLeaseReader) Path() string {
 // GetLeases reads leases from all configured sources and merges them
 func (m *MultiLeaseReader) GetLeases() (map[string]ISCDHCPLease, error) {
 	allLeases := make(map[string]ISCDHCPLease)
-	
+
 	for _, reader := range m.readers {
 		// Skip readers with non-existent files
 		if _, err := os.Stat(reader.Path()); os.IsNotExist(err) {
@@ -43,26 +43,26 @@ func (m *MultiLeaseReader) GetLeases() (map[string]ISCDHCPLease, error) {
 			}
 			continue
 		}
-		
+
 		leases, err := reader.GetLeases()
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("Error reading leases from %s: %v", reader.Path(), err))
 			continue
 		}
-		
+
 		// Merge leases, newer leases (from later readers) will overwrite older ones
 		for mac, lease := range leases {
 			if m.debug {
-				m.logger.Info(fmt.Sprintf("Found lease for %s: %s (%s) from %s", 
+				m.logger.Info(fmt.Sprintf("Found lease for %s: %s (%s) from %s",
 					mac, lease.IP, lease.Hostname, reader.Path()))
 			}
 			allLeases[mac] = lease
 		}
 	}
-	
+
 	if m.debug {
 		m.logger.Info(fmt.Sprintf("Combined %d leases from all sources", len(allLeases)))
 	}
-	
+
 	return allLeases, nil
 }

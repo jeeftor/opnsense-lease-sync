@@ -39,7 +39,7 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 
 	// Create the appropriate lease reader based on the configured format
 	var leaseReader LeaseReader
-	
+
 	switch cfg.LeaseFormat {
 	case DNSMasqFormat:
 		leaseReader = NewDNSMasq(cfg.LeasePath)
@@ -54,7 +54,7 @@ func NewSyncService(cfg Config) (*SyncService, error) {
 			cfg.Logger.Info("Using ISC DHCP lease format")
 		}
 	}
-	
+
 	service := &SyncService{
 		adguard:              adguardClient,
 		leases:               leaseReader,
@@ -524,7 +524,7 @@ func (s *SyncService) Run() error {
 
 	// Get the lease file path
 	path := s.leases.Path()
-	
+
 	// Convert to absolute path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -589,7 +589,7 @@ func (s *SyncService) Run() error {
 				// Check if this is the lease file we're monitoring
 				if eventPath != leaseAbsPath {
 					if s.debug {
-						s.logger.Info(fmt.Sprintf("Ignoring event for non-target file - Event: %s, Target: %s", 
+						s.logger.Info(fmt.Sprintf("Ignoring event for non-target file - Event: %s, Target: %s",
 							eventPath, leaseAbsPath))
 					}
 					continue

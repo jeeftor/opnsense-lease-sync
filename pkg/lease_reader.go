@@ -7,7 +7,7 @@ import "strings"
 type LeaseReader interface {
 	// Path returns the path to the lease file
 	Path() string
-	
+
 	// GetLeases reads the lease file and returns a map of MAC addresses to lease information
 	GetLeases() (map[string]ISCDHCPLease, error)
 }
@@ -18,7 +18,7 @@ func DetectLeaseFileFormat(path string) LeaseReader {
 	if contains(path, "dnsmasq") {
 		return NewDNSMasq(path)
 	}
-	
+
 	// Default to ISC DHCP format
 	return NewDHCP(path)
 }

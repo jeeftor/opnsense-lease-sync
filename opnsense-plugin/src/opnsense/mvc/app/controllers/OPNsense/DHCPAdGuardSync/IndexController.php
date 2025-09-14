@@ -9,7 +9,7 @@ class IndexController extends \OPNsense\Base\IndexController
     {
         // Include form definitions
         $this->view->generalForm = $this->getForm("general");
-        
+
         // Pick the template to serve
         $this->view->pick('OPNsense/DHCPAdGuardSync/index');
     }

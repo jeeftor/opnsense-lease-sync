@@ -50,7 +50,7 @@ func (d *DNSMasq) GetLeases() (map[string]ISCDHCPLease, error) {
 		// DNSMasq lease format: <expiry timestamp> <MAC address> <IP address> <hostname> <client identifier>
 		mac := parts[1]
 		ip := parts[2]
-		
+
 		// Hostname might be "*" or an actual hostname
 		hostname := ""
 		if len(parts) > 3 && parts[3] != "*" {

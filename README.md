@@ -51,18 +51,55 @@ Access the plugin in the OPNsense web interface under **Services > DHCP AdGuard 
 
 ### Manual Installation (Alternative)
 
-If you prefer to install manually:
+For those who prefer not to run scripts directly from GitHub:
 
 ```bash
-# Download the latest release
+# Step 1: Download the latest release
 fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
 
-# Make executable
+# Step 2: Make executable
 chmod +x /tmp/opnsense-lease-sync
 
-# Install (includes both service and GUI components)
+# Step 3: Install (includes both service and GUI components)
 /tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
+
+# Step 4: Start the service
+service dhcp-adguard-sync start
+
+# Step 5: Enable at boot
+service dhcp-adguard-sync enable
 ```
+
+## Updating the Plugin
+
+To update the plugin to a newer version:
+
+### One-Line Update
+
+```bash
+fetch -o - https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install-oneliner.sh | sh -s -- --username "your-adguard-username" --password "your-adguard-password"
+```
+
+### Manual Update
+
+```bash
+# Step 1: Stop the service
+service dhcp-adguard-sync stop
+
+# Step 2: Download the latest release
+fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
+
+# Step 3: Make executable
+chmod +x /tmp/opnsense-lease-sync
+
+# Step 4: Run the installer (this will update all components)
+/tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
+
+# Step 5: Start the service again
+service dhcp-adguard-sync start
+```
+
+The installer will preserve your existing configuration.
 
 For more detailed instructions, see [INSTALL.md](INSTALL.md).
 

@@ -147,6 +147,10 @@ ADGUARD_SCHEME="http"
 DHCP_LEASE_PATH="/var/db/dnsmasq.leases"            # Path to the DNSMasq lease file (default in OPNsense)
 LEASE_FORMAT="dnsmasq"                             # Lease format: "dnsmasq" or "isc"
 
+# Legacy ISC DHCP configuration (commented out for reference)
+#DHCP_LEASE_PATH="/var/dhcpd/var/db/dhcpd.leases"   # Path to the ISC DHCP lease file
+#LEASE_FORMAT="isc"                                # For ISC DHCP server
+
 # Optional settings
 #PRESERVE_DELETED_HOSTS="false"
 #DEBUG="false"

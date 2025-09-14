@@ -22,14 +22,12 @@ builds:
 
 archives:
   - id: standard
-    builds: [standard]
-    name_template: >-
+    name_template: >
       {{ .ProjectName }}_
       {{- .Os }}_
       {{- .Arch }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}_
       {{- "v" }}{{- .Version }}
-    format: tar
     files:
       - README*
       - LICENSE*

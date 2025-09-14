@@ -2,10 +2,9 @@ name: Build OPNsense Plugin Package
 
 on:
   push:
-    tags:
-      - 'v*'
     branches:
       - main
+      - master
   workflow_dispatch:
 
 jobs:
@@ -27,7 +26,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: build --snapshot --clean
+          args: build --snapshot --clean --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -65,7 +64,7 @@ jobs:
         run: |
           cat > repo/dhcpadguardsync.conf << EOF
           dhcpadguardsync: {
-            url: "https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/repo-packages/packages",
+            url: "https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/master/repo/packages",
             enabled: yes,
             priority: 50
           }
@@ -82,7 +81,7 @@ jobs:
           2. Run the following command:
 
           \`\`\`bash
-          fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/repo-packages/dhcpadguardsync.conf
+          fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/master/repo/dhcpadguardsync.conf
           \`\`\`
 
           3. Update the package cache:
@@ -103,9 +102,10 @@ jobs:
           3. Find "os-dhcpadguardsync" in the list and click "Install"
           EOF
 
-      - name: Deploy to repo-packages branch
+      - name: Update repository files
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: repo-packages
+          branch: master
           folder: repo
+          target-folder: repo
           clean: false

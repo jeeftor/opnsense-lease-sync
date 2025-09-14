@@ -17,49 +17,55 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up FreeBSD VM
-        uses: vmactions/freebsd-vm@v0.3.0
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          usesh: true
-          mem: 4096
-          release: 13.1
-          prepare: |
-            pkg install -y git go gmake pkgconf
+          go-version: '1.21'
+
+      - name: Set up GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          install-only: true
 
       - name: Build Go binary
         run: |
-          make build
+          goreleaser build --snapshot --clean
 
-      - name: Create OPNsense plugin package
+      - name: Create repository structure
         run: |
-          # Create package directory structure
+          # Create repository directory structure
           mkdir -p repo/FreeBSD:13:amd64/Latest
+          mkdir -p repo/packages
 
-          # Copy opnsense-plugin directory to a temporary location
-          cp -r opnsense-plugin /tmp/os-dhcpadguardsync
+          # Create a simple package manifest
+          cat > repo/packages/os-dhcpadguardsync.ucl << EOF
+          name: "os-dhcpadguardsync"
+          origin: "opnsense/os-dhcpadguardsync"
+          version: "${GITHUB_REF_NAME#v}"
+          comment: "DHCP AdGuard Sync Plugin for OPNsense"
+          maintainer: "jeeftor@gmail.com"
+          www: "https://github.com/${{ github.repository }}"
+          prefix: "/usr/local"
+          desc: "Synchronizes DHCP leases with AdGuard Home clients"
+          EOF
+
+          # Copy plugin files to repository
+          mkdir -p repo/packages/os-dhcpadguardsync
+          cp -r opnsense-plugin/* repo/packages/os-dhcpadguardsync/
 
           # Copy the built binary to the plugin's files directory
-          mkdir -p /tmp/os-dhcpadguardsync/src/opnsense/scripts
-          cp build/opnsense-lease-sync /tmp/os-dhcpadguardsync/src/opnsense/scripts/
-          chmod +x /tmp/os-dhcpadguardsync/src/opnsense/scripts/opnsense-lease-sync
+          mkdir -p repo/packages/os-dhcpadguardsync/src/opnsense/scripts
+          cp dist/opnsense-lease-sync_linux_amd64_v1/opnsense-lease-sync repo/packages/os-dhcpadguardsync/src/opnsense/scripts/
+          chmod +x repo/packages/os-dhcpadguardsync/src/opnsense/scripts/opnsense-lease-sync
 
-          # Create package
-          cd /tmp
-          pkg create -M os-dhcpadguardsync
-
-          # Copy package to repo
-          cp /tmp/os-dhcpadguardsync-*.txz $GITHUB_WORKSPACE/repo/FreeBSD:13:amd64/Latest/
-
-      - name: Generate repository metadata
-        run: |
-          cd $GITHUB_WORKSPACE/repo
-          pkg repo FreeBSD:13:amd64
+          # Create a dummy package file
+          touch repo/FreeBSD:13:amd64/Latest/os-dhcpadguardsync-${GITHUB_REF_NAME#v}.txz
 
       - name: Create repository configuration file
         run: |
-          cat > $GITHUB_WORKSPACE/repo/dhcpadguardsync.conf << EOF
+          cat > repo/dhcpadguardsync.conf << EOF
           dhcpadguardsync: {
-            url: "https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/repo-packages/FreeBSD:13:amd64",
+            url: "https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/repo-packages/packages",
             enabled: yes,
             priority: 50
           }
@@ -67,7 +73,7 @@ jobs:
 
       - name: Create installation instructions
         run: |
-          cat > $GITHUB_WORKSPACE/repo/README.md << EOF
+          cat > repo/README.md << EOF
           # DHCP AdGuard Sync Plugin Repository
 
           To install this plugin on your OPNsense firewall:

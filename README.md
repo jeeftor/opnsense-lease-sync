@@ -29,7 +29,7 @@ The application supports both ISC DHCP and DNSMasq lease formats, allowing you t
 1. SSH into your OPNsense firewall and run:
 
 ```bash
-fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/repo-packages/repo/dhcpadguardsync.conf
+fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/repo/dhcpadguardsync.conf
 ```
 
 2. Update the package cache:

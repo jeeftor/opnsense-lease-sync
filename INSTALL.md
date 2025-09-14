@@ -9,7 +9,7 @@ This document explains how to install the DHCP AdGuard Sync plugin on your OPNse
 SSH into your OPNsense firewall and run:
 
 ```bash
-fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/repo-packages/repo/dhcpadguardsync.conf
+fetch -o /usr/local/etc/pkg/repos/dhcpadguardsync.conf https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/repo/dhcpadguardsync.conf
 ```
 
 ### Step 2: Update Package Cache

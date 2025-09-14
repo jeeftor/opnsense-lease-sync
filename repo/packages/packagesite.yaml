@@ -1,0 +1,13 @@
+packages:
+  os-dhcpadguardsync:
+    name: "os-dhcpadguardsync"
+    origin: "opnsense/os-dhcpadguardsync"
+    version: "0.0.12"
+    comment: "DHCP AdGuard Sync Plugin for OPNsense"
+    maintainer: "jeeftor@gmail.com"
+    www: "https://github.com/jeeftor/opnsense-lease-sync"
+    prefix: "/usr/local"
+    desc: "Synchronizes DHCP leases with AdGuard Home clients"
+    categories: ["opnsense", "plugin"]
+    licenses: ["MIT"]
+    deps: {}

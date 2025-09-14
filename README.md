@@ -24,39 +24,45 @@ The application supports both ISC DHCP and DNSMasq lease formats, allowing you t
 
 ## Installation
 
-### Direct Installation (Recommended)
+### One-Line Installation (Recommended)
 
-1. SSH into your OPNsense firewall and download the latest release:
+SSH into your OPNsense firewall and run this single command:
 
 ```bash
-fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v0.0.15
+fetch -o - https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install-oneliner.sh | sh -s -- --username "your-adguard-username" --password "your-adguard-password"
 ```
 
-2. Make the binary executable:
+This command will:
+1. Download the latest version of the plugin
+2. Install both the service and the OPNsense GUI components
+3. Configure it with your AdGuard Home credentials
+
+After installation:
 
 ```bash
-chmod +x /tmp/opnsense-lease-sync
-```
-
-3. Install the plugin:
-
-```bash
-/tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
-```
-
-4. Start the service:
-
-```bash
+# Start the service
 service dhcp-adguard-sync start
-```
 
-5. Enable at boot:
-
-```bash
+# Enable at boot
 service dhcp-adguard-sync enable
 ```
 
-6. Access the plugin in the OPNsense web interface under **Services > DHCP AdGuard Sync**
+Access the plugin in the OPNsense web interface under **Services > DHCP AdGuard Sync**
+
+### Manual Installation (Alternative)
+
+If you prefer to install manually:
+
+```bash
+# Download the latest release
+fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
+
+# Make executable
+chmod +x /tmp/opnsense-lease-sync
+
+# Install (includes both service and GUI components)
+/tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
+```
 
 For more detailed instructions, see [INSTALL.md](INSTALL.md).
 

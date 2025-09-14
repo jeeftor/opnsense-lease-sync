@@ -22,7 +22,7 @@ jobs:
         with:
           usesh: true
           mem: 4096
-          release: 13.2
+          release: 13.1
           prepare: |
             pkg install -y git go gmake pkgconf
 

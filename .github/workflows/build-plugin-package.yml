@@ -22,14 +22,14 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Set up GoReleaser
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
-          install-only: true
-
-      - name: Build Go binary
-        run: |
-          goreleaser build --snapshot --clean
+          distribution: goreleaser
+          version: latest
+          args: build --snapshot --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create repository structure
         run: |
@@ -55,7 +55,7 @@ jobs:
 
           # Copy the built binary to the plugin's files directory
           mkdir -p repo/packages/os-dhcpadguardsync/src/opnsense/scripts
-          cp dist/opnsense-lease-sync_linux_amd64_v1/opnsense-lease-sync repo/packages/os-dhcpadguardsync/src/opnsense/scripts/
+          cp dist/opnsense-lease-sync_freebsd_amd64_v1/opnsense-lease-sync repo/packages/os-dhcpadguardsync/src/opnsense/scripts/
           chmod +x repo/packages/os-dhcpadguardsync/src/opnsense/scripts/opnsense-lease-sync
 
           # Create a dummy package file

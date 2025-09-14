@@ -77,8 +77,10 @@ Use --dry-run to preview what would be written without making any changes.`,
 			if err := os.MkdirAll(filepath.Dir(InstallPath), 0755); err != nil {
 				return fmt.Errorf("failed to create installation directory: %w", err)
 			}
-			if err := copyFile(executable, InstallPath); err != nil {
-				return fmt.Errorf("failed to copy binary: %w", err)
+			if executable != InstallPath {
+				if err := copyFile(executable, InstallPath); err != nil {
+					return fmt.Errorf("failed to copy binary: %w", err)
+				}
 			}
 			if err := os.Chmod(InstallPath, 0755); err != nil {
 				return fmt.Errorf("failed to set binary permissions: %w", err)

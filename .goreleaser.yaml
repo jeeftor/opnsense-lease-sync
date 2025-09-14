@@ -25,13 +25,11 @@ archives:
     builds: [standard]
     name_template: >-
       {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "arm64" }}aarch64
-      {{- else }}{{ .Arch }}{{ end }}
+      {{- .Os }}_
+      {{- .Arch }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}_
-      {{- .Version }}
-    format: tar.gz
+      {{- "v" }}{{- .Version }}
+    format: tar
     files:
       - README*
       - LICENSE*

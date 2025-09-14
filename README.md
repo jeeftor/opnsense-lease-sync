@@ -26,6 +26,44 @@ The application supports both ISC DHCP and DNSMasq lease formats, allowing you t
 
 1. Download the latest release from the releases page
 
+```bash
+curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
+```
+
+Or you can try something like the following.
+
+```bash
+#!/bin/sh
+
+# Set variables using uname
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+REPO="jeeftor/opnsense-lease-sync"
+
+# Fetch latest release version from GitHub API
+VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+# Check if version was successfully retrieved
+if [ -z "$VERSION" ]; then
+    echo "Failed to fetch latest version"
+    exit 1
+fi
+
+echo "Found version: ${VERSION}"
+
+# Construct download URL (using .tar)
+URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar"
+
+# Download and extract
+echo "Downloading from: ${URL}"
+curl -L -o /tmp/dhcp-adguard-sync.tar "$URL"
+tar xf /tmp/dhcp-adguard-sync.tar -C /tmp
+
+# Clean up
+rm /tmp/dhcp-adguard-sync.tar
+```
+
+
 2. Copy to your OPNsense system:
 ```bash
 scp dhcp-adguard-sync root@opnsense:/root/

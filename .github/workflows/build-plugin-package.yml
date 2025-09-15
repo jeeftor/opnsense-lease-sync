@@ -2,9 +2,8 @@ name: Build OPNsense Plugin Package
 
 on:
   push:
-    branches:
-      - main
-      - master
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:

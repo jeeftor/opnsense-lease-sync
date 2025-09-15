@@ -1,2 +1,15 @@
 .idea/
 dist/
+build/
+
+# Test files
+dhcp*.lease
+dhcp[0-9]*
+test-install.sh
+
+# Development files
+Makefile
+PLUGIN.md
+
+# macOS
+.DS_Store

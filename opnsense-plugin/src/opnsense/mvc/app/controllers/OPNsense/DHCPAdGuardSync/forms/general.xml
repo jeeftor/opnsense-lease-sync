@@ -29,6 +29,7 @@
         <label>Connection Scheme</label>
         <type>dropdown</type>
         <help>Connection scheme (HTTP or HTTPS)</help>
+        <default>http</default>
         <options>
             <option value="http">HTTP</option>
             <option value="https">HTTPS</option>
@@ -39,6 +40,7 @@
         <label>DHCP Server Type</label>
         <type>dropdown</type>
         <help>Select your DHCP server type (automatically sets lease file path and format)</help>
+        <default>isc</default>
         <options>
             <option value="isc">ISC DHCP (OPNsense default)</option>
             <option value="dnsmasq">DNSMasq</option>
@@ -56,6 +58,7 @@
         <label>Lease File Format</label>
         <type>dropdown</type>
         <help>Format of the DHCP lease file (auto-selected based on DHCP server type)</help>
+        <default>isc</default>
         <options>
             <option value="isc">ISC DHCP</option>
             <option value="dnsmasq">DNSMasq</option>
@@ -78,6 +81,7 @@
         <label>Log Level</label>
         <type>dropdown</type>
         <help>Log verbosity level</help>
+        <default>info</default>
         <options>
             <option value="error">Error</option>
             <option value="warn">Warning</option>

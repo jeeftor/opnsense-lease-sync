@@ -3,7 +3,6 @@
     <Services>
         <DHCPAdGuardSync VisibleName="DHCP AdGuard Sync" cssClass="fa fa-refresh fa-fw">
             <General order="10" url="/ui/dhcpadguardsync"/>
-            <Settings order="20" url="/ui/dhcpadguardsync/settings"/>
             <LogFile VisibleName="Log File" order="100" url="/ui/diagnostics/log/core/dhcp-adguard-sync"/>
         </DHCPAdGuardSync>
     </Services>

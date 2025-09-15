@@ -1,8 +1,34 @@
 # DHCP AdGuard Sync for OPNsense
 
-A service that synchronizes DHCP leases from OPNsense to AdGuard Home, ensuring DNS resolution works correctly for all DHCP clients. It supports both IPv4 and IPv6 addresses through DHCP leases and NDP table monitoring.
+[![Go Version](https://img.shields.io/github/go-mod/go-version/jeeftor/opnsense-lease-sync)](https://golang.org/)
+[![Release](https://img.shields.io/github/v/release/jeeftor/opnsense-lease-sync)](https://github.com/jeeftor/opnsense-lease-sync/releases)
+[![License](https://img.shields.io/github/license/jeeftor/opnsense-lease-sync)](LICENSE)
 
-The application supports both ISC DHCP and DNSMasq lease formats, allowing you to choose which DHCP server's leases to synchronize with AdGuard Home. This ensures that all clients will be properly synchronized to AdGuard Home regardless of which DHCP server you're using.
+> **Automatically sync DHCP clients from OPNsense to AdGuard Home for seamless DNS filtering**
+
+Ever notice that devices on your network don't show up by name in AdGuard Home? This service solves that by automatically synchronizing DHCP lease information from OPNsense to AdGuard Home, ensuring all your devices are properly identified for DNS filtering and monitoring.
+
+## ✨ What This Solves
+
+- **📱 Device Recognition**: See device names instead of IP addresses in AdGuard Home
+- **🔄 Automatic Sync**: No manual client configuration in AdGuard Home
+- **📊 Better Analytics**: Proper device identification for detailed statistics
+- **🛡️ Enhanced Filtering**: Apply DNS rules based on device names
+
+## 🚀 Quick Start
+
+**One-line installation:**
+```bash
+curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
+```
+
+**Then configure via OPNsense Web UI:**
+1. Navigate to **Services > DHCP AdGuard Sync**
+2. Enter your AdGuard Home credentials
+3. Select your DHCP server type (DNSMasq is default)
+4. Click **Save** - service auto-restarts!
+
+**That's it!** Your DHCP clients will now appear in AdGuard Home.
 
 ## Architecture
 
@@ -13,32 +39,31 @@ This project consists of two main components:
 
 The plugin provides a user-friendly interface within OPNsense while the main application handles the core functionality.
 
-## Features
+## 🎯 Features
 
-- Automatic synchronization of DHCP leases to AdGuard Home
-- Support for both ISC DHCP and DNSMasq lease formats (configurable)
-- **OPNsense plugin with web UI** for easy configuration and management
-- IPv6 support through NDP table monitoring
-- Real-time lease file monitoring
-- Support for hostname customization
-- Dry-run mode for testing
-- Configurable logging
-- Runs as a FreeBSD service
-- **Service management through OPNsense web interface**
+| Feature | Description |
+|---------|-------------|
+| 🔄 **Auto-Sync** | Real-time DHCP lease monitoring and synchronization |
+| 🖥️ **Web UI** | Native OPNsense plugin for easy configuration |
+| 🏷️ **Device Names** | See friendly hostnames instead of IP addresses |
+| 📡 **IPv6 Support** | Handles both IPv4 and IPv6 via NDP table monitoring |
+| ⚙️ **Multi-Format** | Supports both ISC DHCP and DNSMasq lease formats |
+| 🧪 **Test Mode** | Dry-run capability for safe testing |
+| 📝 **Logging** | Configurable log levels with rotation |
+| 🚀 **Service** | Runs as native FreeBSD service |
 
-## Prerequisites
+## 📋 Prerequisites
 
-- OPNsense
-- AdGuard Home installed and running
-- AdGuard Home API credentials
+- ✅ OPNsense firewall
+- ✅ AdGuard Home installed and running
+- ✅ AdGuard Home admin credentials
+- ✅ Root access to OPNsense (for installation)
 
-## Installation
+## 💾 Installation
 
-This project has two components that work together:
-1. **Main Application**: The Go binary that performs the actual DHCP-AdGuard synchronization
-2. **OPNsense Plugin**: Web UI for configuration and management (optional but recommended)
+> **💡 Pro Tip**: The automatic installation is recommended for most users
 
-### Option 1: Automatic Installation (Recommended)
+### 🚀 Option 1: Automatic Installation (Recommended)
 
 Install both components with a single command:
 
@@ -253,27 +278,78 @@ dhcp-adguard-sync uninstall --remove-config
 dhcp-adguard-sync uninstall --force
 ```
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
-1. Check service status:
+### Quick Diagnostics
+
 ```bash
+# Check if service is running
 service dhcp-adguard-sync status
+
+# Test configuration
+dhcp-adguard-sync sync --dry-run
+
+# View recent logs
+tail -50 /var/log/dhcp-adguard-sync.log
 ```
 
-2. Enable debug logging:
-    - Edit `/usr/local/etc/dhcp-adguard-sync/config.yaml`
-    - Set `LOG_LEVEL="debug"`
-    - Set `DEBUG="true"`
-    - Restart the service
+### Common Issues & Solutions
 
-3. Common issues:
-    - **Service won't start**: Check logs for permissions issues
-    - **No synchronization**: Verify AdGuard credentials and connection settings
-    - **Missing clients**: Check if the lease file path is correct and the lease format matches your DHCP server:
-      - ISC DHCP lease file: `/var/dhcpd/var/db/dhcpd.leases` (default)
-      - DNSMasq lease file: `/var/db/dnsmasq.leases` (typical location)
-    - **Incorrect client information**: Ensure the lease format setting matches your DHCP server type
-    - **IPv6 not working**: Ensure NDP table is accessible
+<details>
+<summary><strong>🚫 Service won't start</strong></summary>
+
+**Symptoms**: Service fails to start or immediately stops
+**Solutions**:
+1. Check configuration file exists: `ls -la /usr/local/etc/dhcp-adguard-sync/config.yaml`
+2. Verify binary permissions: `ls -la /usr/local/bin/dhcp-adguard-sync`
+3. Check logs: `grep dhcp-adguard-sync /var/log/messages`
+</details>
+
+<details>
+<summary><strong>🔌 No clients appearing in AdGuard Home</strong></summary>
+
+**Symptoms**: Service runs but no devices show up in AdGuard Home
+**Solutions**:
+1. Verify AdGuard credentials work: Test login at AdGuard Home web interface
+2. Check DHCP lease file: `ls -la /var/db/dnsmasq.leases` (or `/var/dhcpd/var/db/dhcpd.leases` for ISC)
+3. Confirm lease format matches your DHCP server
+4. Run test sync: `dhcp-adguard-sync sync --dry-run`
+</details>
+
+<details>
+<summary><strong>🔄 Sync happens but clients disappear</strong></summary>
+
+**Symptoms**: Devices appear briefly then vanish from AdGuard Home
+**Solutions**:
+1. Enable "Preserve Deleted Hosts" in plugin settings
+2. Check for conflicting AdGuard Home settings
+3. Verify DHCP lease renewal times aren't too short
+</details>
+
+<details>
+<summary><strong>📡 IPv6 devices not syncing</strong></summary>
+
+**Symptoms**: Only IPv4 devices appear in AdGuard Home
+**Solutions**:
+1. Ensure IPv6 is enabled in OPNsense DHCP settings
+2. Check NDP table: `ndp -a`
+3. Verify IPv6 DHCP leases exist
+</details>
+
+### Enable Debug Mode
+
+For detailed troubleshooting, enable debug logging:
+
+**Via Web UI**: Navigate to Services > DHCP AdGuard Sync > Enable Debug Mode
+**Via CLI**: Edit config file and set `LOG_LEVEL="debug"`, then restart service
+
+### Getting Help
+
+If issues persist:
+1. Enable debug logging
+2. Reproduce the issue
+3. Collect logs: `tail -100 /var/log/dhcp-adguard-sync.log`
+4. [Open an issue](https://github.com/jeeftor/opnsense-lease-sync/issues) with logs and configuration details
 
 ## Contributing
 

@@ -77,7 +77,7 @@ if [ -f "/usr/local/bin/${BINARY_NAME}" ]; then
 
         # Stop the service if it's running to avoid "text file busy" error
         echo "Stopping service before update..."
-        service dhcp-adguard-sync stop 2>/dev/null
+        /usr/sbin/service dhcp-adguard-sync stop 2>/dev/null
         sleep 2  # Give it time to fully stop
     else
         echo "* Existing binary found but couldn't determine version"
@@ -102,7 +102,7 @@ while [ $INSTALL_ATTEMPT -le $MAX_ATTEMPTS ]; do
             sleep 5
         else
             echo "* Installation failed after $MAX_ATTEMPTS attempts"
-            echo "* You may need to manually stop the service with: service dhcp-adguard-sync stop"
+            echo "* You may need to manually stop the service with: /usr/sbin/service dhcp-adguard-sync stop"
             echo "* Then try running the installer again"
             rm -rf "${TEMP_DIR}"
             exit $RESULT
@@ -127,5 +127,5 @@ echo "   sudo nano /usr/local/etc/dhcp-adguard-sync/config.yaml"
 echo "   sudo vim /usr/local/etc/dhcp-adguard-sync/config.yaml"
 echo ""
 echo "2. Start the service:"
-echo "   sudo service dhcp-adguard-sync start"
+echo "   /usr/sbin/service dhcp-adguard-sync start"
 echo "--------------------------------"

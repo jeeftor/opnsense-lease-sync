@@ -60,56 +60,64 @@ chmod +x "${TEMP_DIR}/${BINARY_NAME}"
 echo "* Permissions set"
 echo "--------------------------------"
 
-# Check if binary already exists and get its version if it does
-if [ -f "/usr/local/bin/${BINARY_NAME}" ]; then
-    echo "Checking existing installation..."
-    CURRENT_VERSION=$(/usr/local/bin/${BINARY_NAME} version 2>/dev/null | grep "version" | awk '{print $3}')
-    if [ -n "$CURRENT_VERSION" ]; then
-        echo "* Current version: ${CURRENT_VERSION}"
-        echo "* New version: ${VERSION}"
-        echo "* Would you like to update? (y/n)"
-        read -r ANSWER
-        if [ "$ANSWER" != "y" ] && [ "$ANSWER" != "Y" ]; then
-            echo "Installation cancelled."
-            rm -rf "${TEMP_DIR}"
-            exit 0
-        fi
-
-        # Stop the service if it's running to avoid "text file busy" error
-        echo "Stopping service before update..."
-        /usr/sbin/service dhcp-adguard-sync stop 2>/dev/null
-        sleep 2  # Give it time to fully stop
-    else
-        echo "* Existing binary found but couldn't determine version"
-    fi
-fi
-
 # Now run the binary's own install command
 echo "Running service installation..."
 
-# Try to install, handling potential "text file busy" error
-INSTALL_ATTEMPT=1
-MAX_ATTEMPTS=3
-while [ $INSTALL_ATTEMPT -le $MAX_ATTEMPTS ]; do
-    if "${TEMP_DIR}/${BINARY_NAME}" install "$@"; then
-        echo "* Service installation complete"
-        break
-    else
-        RESULT=$?
-        if [ $INSTALL_ATTEMPT -lt $MAX_ATTEMPTS ]; then
-            echo "* Installation attempt $INSTALL_ATTEMPT failed (error $RESULT), retrying..."
-            echo "* Waiting for system resources to be available..."
-            sleep 5
+# First attempt to run the installer directly
+if "${TEMP_DIR}/${BINARY_NAME}" install "$@"; then
+    echo "* Service installation complete"
+else
+    # If installation fails, it might be due to "text file busy" error
+    RESULT=$?
+    echo "* Initial installation attempt failed (error $RESULT)"
+
+    # Check if binary already exists and get its version
+    if [ -f "/usr/local/bin/${BINARY_NAME}" ]; then
+        echo "* Checking existing installation..."
+        CURRENT_VERSION=$(/usr/local/bin/${BINARY_NAME} version 2>/dev/null | grep "version" | awk '{print $3}')
+
+        if [ -n "$CURRENT_VERSION" ]; then
+            echo "* Current version: ${CURRENT_VERSION}"
+            echo "* New version: ${VERSION}"
+            echo "* Would you like to update? (y/n)"
+            read -r ANSWER
+
+            if [ "$ANSWER" != "y" ] && [ "$ANSWER" != "Y" ]; then
+                echo "Installation cancelled."
+                rm -rf "${TEMP_DIR}"
+                exit 0
+            fi
+
+            # Stop the service if it's running to avoid "text file busy" error
+            echo "* Stopping service before update..."
+            /usr/sbin/service dhcp-adguard-sync stop 2>/dev/null
+            sleep 2  # Give it time to fully stop
+
+            # Try installation again after stopping the service
+            echo "* Retrying installation after stopping service..."
+            if "${TEMP_DIR}/${BINARY_NAME}" install "$@"; then
+                echo "* Service installation complete"
+            else
+                RESULT=$?
+                echo "* Installation failed after stopping service (error $RESULT)"
+                echo "* You may need to manually stop the service with: /usr/sbin/service dhcp-adguard-sync stop"
+                echo "* Then try running the installer again"
+                rm -rf "${TEMP_DIR}"
+                exit $RESULT
+            fi
         else
-            echo "* Installation failed after $MAX_ATTEMPTS attempts"
+            echo "* Existing binary found but couldn't determine version"
             echo "* You may need to manually stop the service with: /usr/sbin/service dhcp-adguard-sync stop"
             echo "* Then try running the installer again"
             rm -rf "${TEMP_DIR}"
             exit $RESULT
         fi
+    else
+        echo "* Installation failed for unknown reason"
+        rm -rf "${TEMP_DIR}"
+        exit $RESULT
     fi
-    INSTALL_ATTEMPT=$((INSTALL_ATTEMPT + 1))
-done
+fi
 
 echo "--------------------------------"
 

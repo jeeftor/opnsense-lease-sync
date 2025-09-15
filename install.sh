@@ -127,12 +127,68 @@ rm -rf "${TEMP_DIR}"
 echo "* Cleanup complete"
 echo "--------------------------------"
 
+# Check if this is OPNsense and offer to install the GUI plugin
+if [ -f "/usr/local/opnsense/version/opnsense" ]; then
+    echo "OPNsense detected!"
+    echo ""
+    echo "Would you like to install the GUI plugin for web-based management? (y/n)"
+    read -r INSTALL_PLUGIN
+
+    if [ "$INSTALL_PLUGIN" = "y" ] || [ "$INSTALL_PLUGIN" = "Y" ]; then
+        echo "Installing OPNsense GUI plugin..."
+
+        # Download plugin package
+        PLUGIN_URL="https://github.com/${REPO}/releases/download/${VERSION}/os-dhcpadguardsync-plugin.tar.gz"
+        echo "* Downloading plugin from: ${PLUGIN_URL}"
+
+        mkdir -p "${TEMP_DIR}/plugin"
+        curl -L -s -o "${TEMP_DIR}/plugin.tar.gz" "$PLUGIN_URL"
+
+        if [ $? -eq 0 ]; then
+            echo "* Extracting plugin..."
+            tar xfz "${TEMP_DIR}/plugin.tar.gz" -C "${TEMP_DIR}/plugin"
+
+            echo "* Installing plugin files..."
+            cp -r "${TEMP_DIR}/plugin/opnsense-plugin/src/opnsense"/* /usr/local/opnsense/
+
+            echo "* Clearing OPNsense caches..."
+            rm -f /tmp/opnsense_menu_cache.xml
+            rm -f /tmp/opnsense_acl_cache.json
+
+            echo "* Restarting services..."
+            /usr/sbin/service configd restart
+            /usr/sbin/service php-fpm restart
+
+            echo "* GUI plugin installation complete!"
+            echo "* You can now access the web interface at: Services > DHCP AdGuard Sync"
+        else
+            echo "* Failed to download plugin package"
+            echo "* You can install it manually later using the instructions in the README"
+        fi
+
+        # Clean up plugin temp files
+        rm -rf "${TEMP_DIR}/plugin" "${TEMP_DIR}/plugin.tar.gz"
+    else
+        echo "* Skipping GUI plugin installation"
+        echo "* You can install it later using the manual instructions in the README"
+    fi
+    echo "--------------------------------"
+fi
+
 echo "Installation complete!"
 echo ""
 echo "NEXT STEPS:"
-echo "1. Edit the configuration file:"
-echo "   sudo nano /usr/local/etc/dhcp-adguard-sync/config.yaml"
-echo "   sudo vim /usr/local/etc/dhcp-adguard-sync/config.yaml"
+if [ -f "/usr/local/opnsense/version/opnsense" ] && ([ "$INSTALL_PLUGIN" = "y" ] || [ "$INSTALL_PLUGIN" = "Y" ]); then
+    echo "1. Configure via OPNsense Web UI:"
+    echo "   Navigate to Services > DHCP AdGuard Sync"
+    echo ""
+    echo "2. Or edit the configuration file manually:"
+    echo "   sudo nano /usr/local/etc/dhcp-adguard-sync/config.yaml"
+else
+    echo "1. Edit the configuration file:"
+    echo "   sudo nano /usr/local/etc/dhcp-adguard-sync/config.yaml"
+    echo "   sudo vim /usr/local/etc/dhcp-adguard-sync/config.yaml"
+fi
 echo ""
 echo "2. Start the service:"
 echo "   /usr/sbin/service dhcp-adguard-sync start"

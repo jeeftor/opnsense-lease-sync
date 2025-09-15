@@ -34,9 +34,13 @@ The plugin provides a user-friendly interface within OPNsense while the main app
 
 ## Installation
 
-### Automatic Installation (Recommended)
+This project has two components that work together:
+1. **Main Application**: The Go binary that performs the actual DHCP-AdGuard synchronization
+2. **OPNsense Plugin**: Web UI for configuration and management (optional but recommended)
 
-The easiest way to install both the application and OPNsense plugin:
+### Option 1: Automatic Installation (Recommended)
+
+Install both components with a single command:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
@@ -44,31 +48,23 @@ curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/i
 
 This script will:
 - Download the latest release for your platform
-- Install the main application binary
+- Install the main application binary and service
 - Install the OPNsense plugin (if running on OPNsense)
-- Set up the service configuration
+- Set up initial configuration
 
-### Manual Installation
+### Option 2: Manual Installation
 
-If you prefer manual installation:
+#### Step 1: Install Main Application
 
-1. **Download the latest release** from the [releases page](https://github.com/jeeftor/opnsense-lease-sync/releases)
-
-2. **For the main application**, download the appropriate binary for your platform:
+1. **Download the binary** from the [releases page](https://github.com/jeeftor/opnsense-lease-sync/releases):
    ```bash
    # Example for FreeBSD amd64
    curl -L -o dhcp-adguard-sync.tar.gz \
-     "https://github.com/jeeftor/opnsense-lease-sync/releases/download/v0.0.24/dhcp-adguard-sync_freebsd_amd64_v0.0.24.tar.gz"
+     "https://github.com/jeeftor/opnsense-lease-sync/releases/download/v0.0.26/dhcp-adguard-sync_freebsd_amd64_v0.0.26.tar.gz"
    tar -xzf dhcp-adguard-sync.tar.gz
    ```
 
-3. **For the OPNsense plugin** (optional), download the plugin package:
-   ```bash
-   curl -L -o os-dhcpadguardsync-plugin.tar.gz \
-     "https://github.com/jeeftor/opnsense-lease-sync/releases/download/v0.0.24/os-dhcpadguardsync-plugin.tar.gz"
-   ```
-
-4. **Install on your OPNsense system**:
+2. **Install on your OPNsense system**:
    ```bash
    # Copy binary to OPNsense
    scp dhcp-adguard-sync root@opnsense:/root/
@@ -80,18 +76,44 @@ If you prefer manual installation:
    ./dhcp-adguard-sync install --username "your-adguard-username" --password "your-adguard-password"
    ```
 
-5. **Start and enable the service**:
+3. **Start and enable the service**:
    ```bash
    service dhcp-adguard-sync start
    service dhcp-adguard-sync enable
    ```
 
-### Post-Installation
+#### Step 2: Install OPNsense Plugin (Optional)
 
-After installation, you can:
-- **Configure via OPNsense Web UI**: Navigate to Services > DHCP AdGuard Sync
-- **Configure via command line**: Edit `/usr/local/etc/dhcp-adguard-sync/config.yaml`
+The plugin provides a web UI for easy configuration and management.
 
+1. **Download the plugin package**:
+   ```bash
+   curl -L -o os-dhcpadguardsync-plugin.tar.gz \
+     "https://github.com/jeeftor/opnsense-lease-sync/releases/download/v0.0.26/os-dhcpadguardsync-plugin.tar.gz"
+   ```
+
+2. **Extract and install the plugin**:
+   ```bash
+   tar -xzf os-dhcpadguardsync-plugin.tar.gz
+   cd opnsense-plugin/src
+   cp -r opnsense/* /usr/local/opnsense/
+   ```
+
+3. **Clear OPNsense caches**:
+   ```bash
+   rm -f /tmp/opnsense_menu_cache.xml
+   rm -f /tmp/opnsense_acl_cache.json
+   service configd restart
+   service php-fpm restart
+   ```
+
+### Configuration Options
+
+After installation, you can configure the service:
+
+- **Via OPNsense Web UI** (if plugin installed): Navigate to Services > DHCP AdGuard Sync
+- **Via command line**: Edit `/usr/local/etc/dhcp-adguard-sync/config.yaml`
+- **Via CLI commands**: Use `dhcp-adguard-sync --help` for options
 
 ## Configuration
 

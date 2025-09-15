@@ -24,9 +24,11 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^cmd/templates/.*$
       - id: end-of-file-fixer
+        exclude: ^cmd/templates/.*$
       - id: check-yaml
-        exclude: ^cmd/templates/config\.yaml$
+        exclude: ^cmd/templates/.*$
       - id: check-added-large-files
         exclude: ^repo/packages/os-dhcpadguardsync/src/opnsense/scripts/opnsense-lease-sync$
 

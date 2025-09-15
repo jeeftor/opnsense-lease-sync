@@ -6,8 +6,9 @@ ADGUARD_PASSWORD="{{.Password}}"
 ADGUARD_URL="{{.AdGuardURL}}"
 ADGUARD_SCHEME="{{.Scheme}}"
 
-# DHCP lease file location
+# DHCP lease file configuration
 DHCP_LEASE_PATH="{{.LeasePath}}"
+LEASE_FORMAT="{{.LeaseFormat}}"    # Lease format: "isc" or "dnsmasq"
 
 # Optional settings
 {{if .PreserveDeletedHosts}}PRESERVE_DELETED_HOSTS="true"{{else}}#PRESERVE_DELETED_HOSTS="false"{{end}}

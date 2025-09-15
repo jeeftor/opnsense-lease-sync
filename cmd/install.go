@@ -17,16 +17,17 @@ type ConfigTemplate struct {
 	Username             string
 	Password             string
 	Scheme               string
-	Timeout              in
+	Timeout              int
 	LeasePath            string
+	LeaseFormat          string
 	PreserveDeletedHosts bool
-	Debug                bool // Added Debug field
+	Debug                bool
 	DryRun               bool
 	LogLevel             string
 	LogFile              string
-	MaxLogSize           in
-	MaxBackups           in
-	MaxAge               in
+	MaxLogSize           int
+	MaxBackups           int
+	MaxAge               int
 	NoCompress           bool
 }
 
@@ -95,6 +96,7 @@ Use --dry-run to preview what would be written without making any changes.`,
 			Scheme:               scheme,
 			Timeout:              timeout,
 			LeasePath:            leasePath,
+			LeaseFormat:          leaseFormat,
 			PreserveDeletedHosts: preserveDeletedHosts,
 			Debug:                debug, // Added Debug field
 			DryRun:               dryRun,
@@ -180,6 +182,23 @@ Use --dry-run to preview what would be written without making any changes.`,
 			if err := os.WriteFile(RCPath, rcContent, 0755); err != nil {
 				return fmt.Errorf("failed to create rc.d script: %w", err)
 			}
+
+			// Create OPNsense menu directory structure
+			menuDir := filepath.Dir(MenuPath)
+			if err := os.MkdirAll(menuDir, 0755); err != nil {
+				return fmt.Errorf("failed to create menu directory: %w", err)
+			}
+
+			// Copy Menu.xml to OPNsense directory
+			menuContent, err := templates.ReadFile("templates/Menu.xml")
+			if err != nil {
+				return fmt.Errorf("failed to read Menu.xml template: %w", err)
+			}
+
+			if err := os.WriteFile(MenuPath, menuContent, 0644); err != nil {
+				return fmt.Errorf("failed to write Menu.xml: %w", err)
+			}
+			fmt.Printf("Menu file installed at %s\n", MenuPath)
 
 			// Enable the service
 			if err := exec.Command("service", "dhcp-adguard-sync", "enable").Run(); err != nil {

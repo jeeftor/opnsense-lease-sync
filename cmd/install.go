@@ -17,20 +17,20 @@ type ConfigTemplate struct {
 	Username             string
 	Password             string
 	Scheme               string
-	Timeout              int
+	Timeout              in
 	LeasePath            string
 	PreserveDeletedHosts bool
 	Debug                bool // Added Debug field
 	DryRun               bool
 	LogLevel             string
 	LogFile              string
-	MaxLogSize           int
-	MaxBackups           int
-	MaxAge               int
+	MaxLogSize           in
+	MaxBackups           in
+	MaxAge               in
 	NoCompress           bool
 }
 
-// copyFile copies a file from src to dst
+// copyFile copies a file from src to ds
 func copyFile(src, dst string) error {
 	input, err := os.ReadFile(src)
 	if err != nil {
@@ -50,7 +50,7 @@ var installCmd = &cobra.Command{
 This will:
 1. Copy the binary to /usr/local/bin
 2. Create a config file in /usr/local/etc/dhcp-adguard-sync with provided credentials
-3. Install the rc.d service script
+3. Install the rc.d service scrip
 4. Set appropriate permissions
 
 Use --dry-run to preview what would be written without making any changes.`,
@@ -106,7 +106,7 @@ Use --dry-run to preview what would be written without making any changes.`,
 			NoCompress:           noCompress,
 		}
 
-		// Read template content
+		// Read template conten
 		templateContent, err := templates.ReadFile("templates/config.yaml")
 		if err != nil {
 			return fmt.Errorf("failed to read config template: %w", err)
@@ -133,17 +133,32 @@ Use --dry-run to preview what would be written without making any changes.`,
 			fmt.Println(configBuffer.String())
 			fmt.Println("---")
 		} else {
-			// Create config directory and write config
+			// Create config directory and check for existing config
 			configDir := filepath.Dir(ConfigPath)
 			if err := os.MkdirAll(configDir, 0755); err != nil {
 				return fmt.Errorf("failed to create config directory: %w", err)
 			}
-			if err := os.WriteFile(ConfigPath, configBuffer.Bytes(), 0600); err != nil {
-				return fmt.Errorf("failed to write config file: %w", err)
+
+			// Check if config file already exists
+			configExists := false
+			if _, err := os.Stat(ConfigPath); err == nil {
+				configExists = true
+				fmt.Printf("\nExisting configuration found at %s\n", ConfigPath)
+				fmt.Println("Preserving existing configuration")
+			} else if !os.IsNotExist(err) {
+				return fmt.Errorf("failed to check for existing config: %w", err)
+			}
+
+			// Only write config if it doesn't exis
+			if !configExists {
+				if err := os.WriteFile(ConfigPath, configBuffer.Bytes(), 0600); err != nil {
+					return fmt.Errorf("failed to write config file: %w", err)
+				}
+				fmt.Printf("\nNew configuration written to %s\n", ConfigPath)
 			}
 		}
 
-		// Read and process RC script
+		// Read and process RC scrip
 		rcContent, err := templates.ReadFile("templates/rc.script")
 		if err != nil {
 			return fmt.Errorf("failed to read rc.script template: %w", err)
@@ -161,7 +176,7 @@ Use --dry-run to preview what would be written without making any changes.`,
 			fmt.Println("\nService Installation (Dry Run):")
 			fmt.Println("Would run: service dhcp-adguard-sync enable")
 		} else {
-			// Write RC script
+			// Write RC scrip
 			if err := os.WriteFile(RCPath, rcContent, 0755); err != nil {
 				return fmt.Errorf("failed to create rc.d script: %w", err)
 			}
@@ -177,7 +192,7 @@ Use --dry-run to preview what would be written without making any changes.`,
 			fmt.Println("No changes were made to your system.")
 		} else {
 			fmt.Println("\nInstallation completed successfully!")
-			fmt.Printf("Configuration has been written to %s\n", ConfigPath)
+			// Message about configuration was already printed earlier
 			fmt.Println("Start the service with: service dhcp-adguard-sync start")
 		}
 		return nil

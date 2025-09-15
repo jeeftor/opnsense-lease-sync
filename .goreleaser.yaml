@@ -16,9 +16,9 @@ builds:
     flags: ["-trimpath"]
     ldflags:
       - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
+      - -X opnsense-lease-sync/cmd.version={{.Version}}
+      - -X opnsense-lease-sync/cmd.commit={{.Commit}}
+      - -X opnsense-lease-sync/cmd.date={{.Date}}
 
 archives:
   - id: standard

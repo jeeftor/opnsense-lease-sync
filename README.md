@@ -29,13 +29,18 @@ The application supports both ISC DHCP and DNSMasq lease formats, allowing you t
 SSH into your OPNsense firewall and run this single command:
 
 ```bash
-fetch -o - https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install-oneliner.sh | sh -s -- --username "your-adguard-username" --password "your-adguard-password"
+curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
 ```
 
 This command will:
 1. Download the latest version of the plugin
 2. Install both the service and the OPNsense GUI components
-3. Configure it with your AdGuard Home credentials
+
+After installation, you'll need to configure it with your AdGuard Home credentials by editing the config file or running the installer with parameters:
+
+```bash
+/usr/local/bin/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
+```
 
 After installation:
 
@@ -77,7 +82,17 @@ To update the plugin to a newer version:
 ### One-Line Update
 
 ```bash
-fetch -o - https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install-oneliner.sh | sh -s -- --username "your-adguard-username" --password "your-adguard-password"
+# Stop the service first
+service dhcp-adguard-sync stop
+
+# Run the installer to update
+curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
+
+# Reconfigure with your credentials if needed
+/usr/local/bin/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
+
+# Start the service again
+service dhcp-adguard-sync start
 ```
 
 ### Manual Update
@@ -101,7 +116,6 @@ service dhcp-adguard-sync start
 
 The installer will preserve your existing configuration.
 
-For more detailed instructions, see [INSTALL.md](INSTALL.md).
 
 ## Configuration
 

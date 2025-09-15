@@ -22,25 +22,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build OPNsense plugin package
-      - name: Set up FreeBSD environment
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -y gmake
-            mkdir -p /usr/ports/Mk
-            fetch -o /usr/ports/Mk/plugins.mk https://raw.githubusercontent.com/opnsense/plugins/master/Mk/plugins.mk
-
-      - name: Build OPNsense plugin
+      # Create OPNsense plugin package (simple tar.gz approach)
+      - name: Create OPNsense plugin package
         run: |
           cd opnsense-plugin
-          gmake package
-          mv work/pkg/*.txz ../os-dhcpadguardsync.txz
+          tar -czf ../os-dhcpadguardsync-plugin.tar.gz .
 
       - name: Upload OPNsense plugin to release
         uses: softprops/action-gh-release@v1
         with:
-          files: os-dhcpadguardsync.txz
+          files: os-dhcpadguardsync-plugin.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -55,8 +55,7 @@ For those who prefer not to run scripts directly from GitHub:
 
 ```bash
 # Download the latest release
-VERSION=$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
-fetch -o /tmp/opnsense-lease-sync "https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_${VERSION}"
+fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
 
 # Make executable
 chmod +x /tmp/opnsense-lease-sync
@@ -88,8 +87,7 @@ fetch -o - https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/
 service dhcp-adguard-sync stop
 
 # Step 2: Download the latest release
-VERSION=$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
-fetch -o /tmp/opnsense-lease-sync "https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_${VERSION}"
+fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
 
 # Step 3: Make executable
 chmod +x /tmp/opnsense-lease-sync

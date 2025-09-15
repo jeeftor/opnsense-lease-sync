@@ -24,97 +24,68 @@ The application supports both ISC DHCP and DNSMasq lease formats, allowing you t
 
 ## Installation
 
-### One-Line Installation (Recommended)
-
-SSH into your OPNsense firewall and run this single command:
+1. Download the latest release from the releases page
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
 ```
 
-This command will:
-1. Download the latest version of the plugin
-2. Install both the service and the OPNsense GUI components
-
-After installation, you'll need to configure it with your AdGuard Home credentials by editing the config file or running the installer with parameters:
+Or you can try something like the following.
 
 ```bash
-/usr/local/bin/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
+#!/bin/sh
+
+# Set variables using uname
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+REPO="jeeftor/opnsense-lease-sync"
+
+# Fetch latest release version from GitHub API
+VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+# Check if version was successfully retrieved
+if [ -z "$VERSION" ]; then
+    echo "Failed to fetch latest version"
+    exit 1
+fi
+
+echo "Found version: ${VERSION}"
+
+# Construct download URL (using .tar)
+URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar"
+
+# Download and extract
+echo "Downloading from: ${URL}"
+curl -L -o /tmp/dhcp-adguard-sync.tar "$URL"
+tar xf /tmp/dhcp-adguard-sync.tar -C /tmp
+
+# Clean up
+rm /tmp/dhcp-adguard-sync.tar
 ```
 
-After installation:
 
+2. Copy to your OPNsense system:
 ```bash
-# Start the service
-service dhcp-adguard-sync start
+scp dhcp-adguard-sync root@opnsense:/root/
+```
 
-# Enable at boot
+3. SSH into your OPNsense system and install:
+```bash
+ssh root@opnsense
+cd /root
+chmod +x dhcp-adguard-sync
+./dhcp-adguard-sync install --username "your-adguard-username" --password "your-adguard-password"
+```
+
+4. Start the service:
+```bash
+service dhcp-adguard-sync start
+```
+
+5. Enable at boot:
+```bash
 service dhcp-adguard-sync enable
 ```
-
-Access the plugin in the OPNsense web interface under **Services > DHCP AdGuard Sync**
-
-### Manual Installation (Alternative)
-
-For those who prefer not to run scripts directly from GitHub:
-
-```bash
-# Download the latest release
-fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
-
-# Make executable
-chmod +x /tmp/opnsense-lease-sync
-
-# Step 3: Install (includes both service and GUI components)
-/tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
-
-# Step 4: Start the service
-service dhcp-adguard-sync start
-
-# Step 5: Enable at boot
-service dhcp-adguard-sync enable
-```
-
-## Updating the Plugin
-
-To update the plugin to a newer version:
-
-### One-Line Update
-
-```bash
-# Stop the service first
-service dhcp-adguard-sync stop
-
-# Run the installer to update
-curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
-
-# Reconfigure with your credentials if needed
-/usr/local/bin/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
-
-# Start the service again
-service dhcp-adguard-sync start
-```
-
-### Manual Update
-
-```bash
-# Step 1: Stop the service
-service dhcp-adguard-sync stop
-
-# Step 2: Download the latest release
-fetch -o /tmp/opnsense-lease-sync https://github.com/jeeftor/opnsense-lease-sync/releases/latest/download/dhcp-adguard-sync_freebsd_amd64_v$(curl -s https://api.github.com/repos/jeeftor/opnsense-lease-sync/releases/latest | grep tag_name | cut -d '"' -f 4)
-
-# Step 3: Make executable
-chmod +x /tmp/opnsense-lease-sync
-
-# Step 4: Run the installer (this will update all components)
-/tmp/opnsense-lease-sync install --username "your-adguard-username" --password "your-adguard-password"
-
-# Step 5: Start the service again
-service dhcp-adguard-sync start
-```
-
-The installer will preserve your existing configuration.
 
 
 ## Configuration

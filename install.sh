@@ -38,19 +38,19 @@ echo "Creating temporary directory..."
 mkdir -p "${TEMP_DIR}"
 echo "* Created: ${TEMP_DIR}"
 
-# Construct download URL (using .tar)
-URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar"
+# Construct download URL (using .tar.gz)
+URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar.gz"
 echo "Constructed download URL:"
 echo "* ${URL}"
 echo "--------------------------------"
 
 # Download and extract to temp directory
 echo "Downloading release package..."
-curl -L -s -o "${TEMP_DIR}/dhcp-adguard-sync.tar" "$URL"
+curl -L -s -o "${TEMP_DIR}/dhcp-adguard-sync.tar.gz" "$URL"
 echo "* Download complete"
 
 echo "Extracting package..."
-tar xf "${TEMP_DIR}/dhcp-adguard-sync.tar" -C "${TEMP_DIR}"
+tar xfz "${TEMP_DIR}/dhcp-adguard-sync.tar.gz" -C "${TEMP_DIR}"
 echo "* Extraction complete"
 echo "--------------------------------"
 

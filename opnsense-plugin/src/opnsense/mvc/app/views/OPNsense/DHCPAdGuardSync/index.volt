@@ -3,7 +3,11 @@
     # All rights reserved.
     #}
 
-   <script>
+{% extends "layout_partials/base.volt" %}
+
+{% block content %}
+
+<script>
        $( document ).ready(function() {
            var data_get_map = {'frm_settings':"/api/dhcpadguardsync/settings/get"};
            mapDataToFormUI(data_get_map).done(function(data){
@@ -123,3 +127,5 @@
            </div>
        </div>
    </div>
+
+{% endblock %}

@@ -1,15 +1,10 @@
 <?php
 namespace OPNsense\DHCPAdGuardSync;
 
-use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Config;
-use OPNsense\DHCPAdGuardSync\DHCPAdGuardSync;
 
-class SettingsController extends ApiMutableModelControllerBase
+class SettingsController extends \OPNsense\Base\IndexController
 {
-    protected static $internalModelName = 'dhcpadguardsync';
-    protected static $internalModelClass = '\OPNsense\DHCPAdGuardSync\DHCPAdGuardSync';
-
     public function indexAction()
     {
         // Include form definitions

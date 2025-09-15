@@ -33,7 +33,7 @@ var (
 // validateAdGuardFlags checks AdGuard-specific flags
 func validateAdGuardFlags(cmd *cobra.Command) error {
 	// Skip validation for commands that don't need AdGuard credentials
-	if cmd.Name() == "install" || cmd.Name() == "uninstall" {
+	if cmd.Name() == "install" || cmd.Name() == "uninstall" || cmd.Name() == "version" {
 		return nil
 	}
 

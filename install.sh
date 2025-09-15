@@ -60,10 +60,57 @@ chmod +x "${TEMP_DIR}/${BINARY_NAME}"
 echo "* Permissions set"
 echo "--------------------------------"
 
+# Check if binary already exists and get its version if it does
+if [ -f "/usr/local/bin/${BINARY_NAME}" ]; then
+    echo "Checking existing installation..."
+    CURRENT_VERSION=$(/usr/local/bin/${BINARY_NAME} version 2>/dev/null | grep "version" | awk '{print $3}')
+    if [ -n "$CURRENT_VERSION" ]; then
+        echo "* Current version: ${CURRENT_VERSION}"
+        echo "* New version: ${VERSION}"
+        echo "* Would you like to update? (y/n)"
+        read -r ANSWER
+        if [ "$ANSWER" != "y" ] && [ "$ANSWER" != "Y" ]; then
+            echo "Installation cancelled."
+            rm -rf "${TEMP_DIR}"
+            exit 0
+        fi
+
+        # Stop the service if it's running to avoid "text file busy" error
+        echo "Stopping service before update..."
+        service dhcp-adguard-sync stop 2>/dev/null
+        sleep 2  # Give it time to fully stop
+    else
+        echo "* Existing binary found but couldn't determine version"
+    fi
+fi
+
 # Now run the binary's own install command
 echo "Running service installation..."
-"${TEMP_DIR}/${BINARY_NAME}" install "$@"
-echo "* Service installation complete"
+
+# Try to install, handling potential "text file busy" error
+INSTALL_ATTEMPT=1
+MAX_ATTEMPTS=3
+while [ $INSTALL_ATTEMPT -le $MAX_ATTEMPTS ]; do
+    if "${TEMP_DIR}/${BINARY_NAME}" install "$@"; then
+        echo "* Service installation complete"
+        break
+    else
+        RESULT=$?
+        if [ $INSTALL_ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            echo "* Installation attempt $INSTALL_ATTEMPT failed (error $RESULT), retrying..."
+            echo "* Waiting for system resources to be available..."
+            sleep 5
+        else
+            echo "* Installation failed after $MAX_ATTEMPTS attempts"
+            echo "* You may need to manually stop the service with: service dhcp-adguard-sync stop"
+            echo "* Then try running the installer again"
+            rm -rf "${TEMP_DIR}"
+            exit $RESULT
+        fi
+    fi
+    INSTALL_ATTEMPT=$((INSTALL_ATTEMPT + 1))
+done
+
 echo "--------------------------------"
 
 # Clean up

@@ -217,6 +217,96 @@ Use --dry-run to preview what would be written without making any changes.`,
 			}
 			fmt.Printf("ACL file installed at %s\n", ACLPath)
 
+			// Create model directory and copy model files
+			modelDir := filepath.Dir(ModelXMLPath)
+			if err := os.MkdirAll(modelDir, 0755); err != nil {
+				return fmt.Errorf("failed to create model directory: %w", err)
+			}
+
+			// Copy model XML file
+			modelXMLContent, err := templates.ReadFile("templates/DHCPAdGuardSync.xml")
+			if err != nil {
+				return fmt.Errorf("failed to read DHCPAdGuardSync.xml template: %w", err)
+			}
+
+			if err := os.WriteFile(ModelXMLPath, modelXMLContent, 0644); err != nil {
+				return fmt.Errorf("failed to write DHCPAdGuardSync.xml: %w", err)
+			}
+			fmt.Printf("Model XML file installed at %s\n", ModelXMLPath)
+
+			// Copy model PHP file
+			modelPHPContent, err := templates.ReadFile("templates/DHCPAdGuardSync.php")
+			if err != nil {
+				return fmt.Errorf("failed to read DHCPAdGuardSync.php template: %w", err)
+			}
+
+			if err := os.WriteFile(ModelPHPPath, modelPHPContent, 0644); err != nil {
+				return fmt.Errorf("failed to write DHCPAdGuardSync.php: %w", err)
+			}
+			fmt.Printf("Model PHP file installed at %s\n", ModelPHPPath)
+
+			// Create API controllers directory and copy controller files
+			controllersDir := filepath.Dir(SettingsControllerPath)
+			if err := os.MkdirAll(controllersDir, 0755); err != nil {
+				return fmt.Errorf("failed to create controllers directory: %w", err)
+			}
+
+			// Copy settings controller
+			settingsContent, err := templates.ReadFile("templates/SettingsController.php")
+			if err != nil {
+				return fmt.Errorf("failed to read SettingsController.php template: %w", err)
+			}
+
+			if err := os.WriteFile(SettingsControllerPath, settingsContent, 0644); err != nil {
+				return fmt.Errorf("failed to write SettingsController.php: %w", err)
+			}
+			fmt.Printf("Settings controller installed at %s\n", SettingsControllerPath)
+
+			// Copy service controller
+			serviceContent, err := templates.ReadFile("templates/ServiceController.php")
+			if err != nil {
+				return fmt.Errorf("failed to read ServiceController.php template: %w", err)
+			}
+
+			if err := os.WriteFile(ServiceControllerPath, serviceContent, 0644); err != nil {
+				return fmt.Errorf("failed to write ServiceController.php: %w", err)
+			}
+			fmt.Printf("Service controller installed at %s\n", ServiceControllerPath)
+
+			// Create view directory and copy view file
+			viewDir := filepath.Dir(ViewPath)
+			if err := os.MkdirAll(viewDir, 0755); err != nil {
+				return fmt.Errorf("failed to create view directory: %w", err)
+			}
+
+			// Copy view file
+			viewContent, err := templates.ReadFile("templates/index.volt")
+			if err != nil {
+				return fmt.Errorf("failed to read index.volt template: %w", err)
+			}
+
+			if err := os.WriteFile(ViewPath, viewContent, 0644); err != nil {
+				return fmt.Errorf("failed to write index.volt: %w", err)
+			}
+			fmt.Printf("View file installed at %s\n", ViewPath)
+
+			// Create form directory and copy form file
+			formDir := filepath.Dir(FormPath)
+			if err := os.MkdirAll(formDir, 0755); err != nil {
+				return fmt.Errorf("failed to create form directory: %w", err)
+			}
+
+			// Copy form file
+			formContent, err := templates.ReadFile("templates/dialogSettings.xml")
+			if err != nil {
+				return fmt.Errorf("failed to read dialogSettings.xml template: %w", err)
+			}
+
+			if err := os.WriteFile(FormPath, formContent, 0644); err != nil {
+				return fmt.Errorf("failed to write dialogSettings.xml: %w", err)
+			}
+			fmt.Printf("Form file installed at %s\n", FormPath)
+
 			// Enable the service
 			if err := exec.Command("service", "dhcp-adguard-sync", "enable").Run(); err != nil {
 				return fmt.Errorf("failed to enable service: %w", err)

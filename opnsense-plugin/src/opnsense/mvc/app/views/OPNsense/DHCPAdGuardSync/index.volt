@@ -47,6 +47,22 @@
             $('.selectpicker').selectpicker('refresh');
         });
 
+        // DHCP Server type change handler
+        $("#dhcpadguardsync\\.general\\.dhcp_server").change(function(){
+            var serverType = $(this).val();
+            var leasePathField = $("#dhcpadguardsync\\.general\\.lease_path");
+            var leaseFormatField = $("#dhcpadguardsync\\.general\\.lease_format");
+
+            if (serverType === 'isc') {
+                leasePathField.val('/var/dhcpd/var/db/dhcpd.leases');
+                leaseFormatField.val('isc').trigger('change');
+            } else if (serverType === 'dnsmasq') {
+                leasePathField.val('/var/db/dnsmasq.leases');
+                leaseFormatField.val('dnsmasq').trigger('change');
+            }
+            // For 'custom', leave fields as-is for manual configuration
+        });
+
         // Save settings
         $("#saveAct").click(function(){
             saveFormToEndpoint(url="/api/dhcpadguardsync/settings/set", formid='frm_settings',callback_ok=function(){

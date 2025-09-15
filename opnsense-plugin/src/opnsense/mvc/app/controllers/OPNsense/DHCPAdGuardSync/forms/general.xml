@@ -2,45 +2,64 @@
 <form>
     <field>
         <id>dhcpadguardsync.general.enabled</id>
-        <label>Enable</label>
+        <label>Enable Service</label>
         <type>checkbox</type>
         <help>Enable the DHCP AdGuard Sync service</help>
     </field>
     <field>
         <id>dhcpadguardsync.general.adguard_url</id>
-        <label>AdGuard URL</label>
+        <label>AdGuard Home URL</label>
         <type>text</type>
         <help>AdGuard Home URL (e.g. 127.0.0.1:3000)</help>
     </field>
     <field>
         <id>dhcpadguardsync.general.adguard_username</id>
-        <label>AdGuard Username</label>
+        <label>AdGuard Home Username</label>
         <type>text</type>
-        <help>AdGuard Home username</help>
+        <help>AdGuard Home username for authentication</help>
     </field>
     <field>
         <id>dhcpadguardsync.general.adguard_password</id>
-        <label>AdGuard Password</label>
+        <label>AdGuard Home Password</label>
         <type>password</type>
-        <help>AdGuard Home password</help>
+        <help>AdGuard Home password for authentication</help>
     </field>
     <field>
         <id>dhcpadguardsync.general.adguard_scheme</id>
         <label>Connection Scheme</label>
         <type>dropdown</type>
         <help>Connection scheme (HTTP or HTTPS)</help>
+        <options>
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+        </options>
+    </field>
+    <field>
+        <id>dhcpadguardsync.general.dhcp_server</id>
+        <label>DHCP Server Type</label>
+        <type>dropdown</type>
+        <help>Select your DHCP server type (automatically sets lease file path and format)</help>
+        <options>
+            <option value="isc">ISC DHCP (OPNsense default)</option>
+            <option value="dnsmasq">DNSMasq</option>
+            <option value="custom">Custom (manual configuration)</option>
+        </options>
     </field>
     <field>
         <id>dhcpadguardsync.general.lease_path</id>
-        <label>Lease File Path</label>
+        <label>DHCP Lease File Path</label>
         <type>text</type>
-        <help>Path to the DHCP lease file</help>
+        <help>Path to the DHCP lease file (auto-filled based on DHCP server type)</help>
     </field>
     <field>
         <id>dhcpadguardsync.general.lease_format</id>
         <label>Lease File Format</label>
         <type>dropdown</type>
-        <help>Format of the DHCP lease file (ISC DHCP or DNSMasq)</help>
+        <help>Format of the DHCP lease file (auto-selected based on DHCP server type)</help>
+        <options>
+            <option value="isc">ISC DHCP</option>
+            <option value="dnsmasq">DNSMasq</option>
+        </options>
     </field>
     <field>
         <id>dhcpadguardsync.general.preserve_deleted_hosts</id>
@@ -52,12 +71,18 @@
         <id>dhcpadguardsync.general.debug</id>
         <label>Debug Mode</label>
         <type>checkbox</type>
-        <help>Enable debug logging</help>
+        <help>Enable debug logging (more verbose output)</help>
     </field>
     <field>
         <id>dhcpadguardsync.general.log_level</id>
         <label>Log Level</label>
         <type>dropdown</type>
-        <help>Log level (error, warn, info, debug)</help>
+        <help>Log verbosity level</help>
+        <options>
+            <option value="error">Error</option>
+            <option value="warn">Warning</option>
+            <option value="info">Info</option>
+            <option value="debug">Debug</option>
+        </options>
     </field>
 </form>

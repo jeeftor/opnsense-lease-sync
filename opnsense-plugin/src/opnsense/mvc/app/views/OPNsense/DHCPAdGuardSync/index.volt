@@ -1,4 +1,4 @@
-{% extends "layout_partials/base_form.volt" %}
+{% extends "layout_partials/base_form_edit.volt" %}
 {% block content %}
 <div class="alert alert-info hidden" role="alert" id="responseMsg">
 </div>

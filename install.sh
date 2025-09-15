@@ -121,12 +121,6 @@ fi
 
 echo "--------------------------------"
 
-# Clean up
-echo "Cleaning up temporary files..."
-rm -rf "${TEMP_DIR}"
-echo "* Cleanup complete"
-echo "--------------------------------"
-
 # Check if this is OPNsense and offer to install the GUI plugin
 if [ -f "/usr/local/opnsense/version/opnsense" ]; then
     echo "OPNsense detected!"
@@ -174,6 +168,12 @@ if [ -f "/usr/local/opnsense/version/opnsense" ]; then
     fi
     echo "--------------------------------"
 fi
+
+# Clean up
+echo "Cleaning up temporary files..."
+rm -rf "${TEMP_DIR}"
+echo "* Cleanup complete"
+echo "--------------------------------"
 
 echo "Installation complete!"
 echo ""

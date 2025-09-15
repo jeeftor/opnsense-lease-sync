@@ -200,6 +200,23 @@ Use --dry-run to preview what would be written without making any changes.`,
 			}
 			fmt.Printf("Menu file installed at %s\n", MenuPath)
 
+			// Create ACL directory and copy ACL.xml
+			aclDir := filepath.Dir(ACLPath)
+			if err := os.MkdirAll(aclDir, 0755); err != nil {
+				return fmt.Errorf("failed to create ACL directory: %w", err)
+			}
+
+			// Copy ACL.xml to OPNsense directory
+			aclContent, err := templates.ReadFile("templates/ACL.xml")
+			if err != nil {
+				return fmt.Errorf("failed to read ACL.xml template: %w", err)
+			}
+
+			if err := os.WriteFile(ACLPath, aclContent, 0644); err != nil {
+				return fmt.Errorf("failed to write ACL.xml: %w", err)
+			}
+			fmt.Printf("ACL file installed at %s\n", ACLPath)
+
 			// Enable the service
 			if err := exec.Command("service", "dhcp-adguard-sync", "enable").Run(); err != nil {
 				return fmt.Errorf("failed to enable service: %w", err)

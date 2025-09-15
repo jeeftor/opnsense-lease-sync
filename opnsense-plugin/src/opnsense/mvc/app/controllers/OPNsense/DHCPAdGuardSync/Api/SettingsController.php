@@ -1,21 +1,18 @@
 <?php
 namespace OPNsense\DHCPAdGuardSync\Api;
 
-use OPNsense\Base\ApiMutableModelControllerBase;
+use OPNsense\Base\ApiControllerBase;
 use OPNsense\Core\Config;
 use OPNsense\DHCPAdGuardSync\DHCPAdGuardSync;
 
-class SettingsController extends ApiMutableModelControllerBase
+class SettingsController extends ApiControllerBase
 {
-    protected static $internalModelName = 'dhcpadguardsync';
-    protected static $internalModelClass = '\OPNsense\DHCPAdGuardSync\DHCPAdGuardSync';
-
     public function getAction()
     {
         $result = array();
         if ($this->request->isGet()) {
             $mdl = new DHCPAdGuardSync();
-            $result['dhcpadguardsync'] = $mdl->getNodes();
+            $result['settings'] = $mdl->getNodes();
         }
         return $result;
     }
@@ -25,9 +22,9 @@ class SettingsController extends ApiMutableModelControllerBase
         $result = array("result" => "failed");
         if ($this->request->isPost()) {
             $mdl = new DHCPAdGuardSync();
-            $mdl->setNodes($this->request->getPost("dhcpadguardsync"));
-            $validationMessages = $mdl->performValidation();
+            $mdl->setNodes($this->request->getPost("settings"));
 
+            $validationMessages = $mdl->performValidation();
             if (count($validationMessages) == 0) {
                 $mdl->serializeToConfig();
                 Config::getInstance()->save();

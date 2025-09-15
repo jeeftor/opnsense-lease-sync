@@ -183,136 +183,185 @@ Use --dry-run to preview what would be written without making any changes.`,
 				return fmt.Errorf("failed to create rc.d script: %w", err)
 			}
 
-			// Create OPNsense menu directory structure
-			menuDir := filepath.Dir(MenuPath)
-			if err := os.MkdirAll(menuDir, 0755); err != nil {
-				return fmt.Errorf("failed to create menu directory: %w", err)
-			}
+			// Install OPNsense plugin files if running on OPNsense
+			if _, err := os.Stat("/usr/local/opnsense"); err == nil {
+				fmt.Println("\nDetected OPNsense system, installing UI plugin...")
 
-			// Copy Menu.xml to OPNsense directory
-			menuContent, err := templates.ReadFile("templates/Menu.xml")
-			if err != nil {
-				return fmt.Errorf("failed to read Menu.xml template: %w", err)
-			}
+				// Create menu directory and copy Menu.xml
+				menuDir := filepath.Dir(MenuPath)
+				if err := os.MkdirAll(menuDir, 0755); err != nil {
+					return fmt.Errorf("failed to create menu directory: %w", err)
+				}
 
-			if err := os.WriteFile(MenuPath, menuContent, 0644); err != nil {
-				return fmt.Errorf("failed to write Menu.xml: %w", err)
-			}
-			fmt.Printf("Menu file installed at %s\n", MenuPath)
+				// Copy Menu.xml from plugin directory
+				menuSrc := "opnsense-plugin/src/opnsense/mvc/app/models/OPNsense/DHCPAdGuardSync/Menu/Menu.xml"
+				menuContent, err := os.ReadFile(menuSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read Menu.xml from plugin directory: %w", err)
+				}
 
-			// Create ACL directory and copy ACL.xml
-			aclDir := filepath.Dir(ACLPath)
-			if err := os.MkdirAll(aclDir, 0755); err != nil {
-				return fmt.Errorf("failed to create ACL directory: %w", err)
-			}
+				if err := os.WriteFile(MenuPath, menuContent, 0644); err != nil {
+					return fmt.Errorf("failed to write Menu.xml: %w", err)
+				}
+				fmt.Printf("Menu file installed at %s\n", MenuPath)
 
-			// Copy ACL.xml to OPNsense directory
-			aclContent, err := templates.ReadFile("templates/ACL.xml")
-			if err != nil {
-				return fmt.Errorf("failed to read ACL.xml template: %w", err)
-			}
+				// Create ACL directory and copy ACL.xml
+				aclDir := filepath.Dir(ACLPath)
+				if err := os.MkdirAll(aclDir, 0755); err != nil {
+					return fmt.Errorf("failed to create ACL directory: %w", err)
+				}
 
-			if err := os.WriteFile(ACLPath, aclContent, 0644); err != nil {
-				return fmt.Errorf("failed to write ACL.xml: %w", err)
-			}
-			fmt.Printf("ACL file installed at %s\n", ACLPath)
+				// Copy ACL.xml from plugin directory
+				aclSrc := "opnsense-plugin/src/opnsense/mvc/app/models/OPNsense/DHCPAdGuardSync/ACL/ACL.xml"
+				aclContent, err := os.ReadFile(aclSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read ACL.xml from plugin directory: %w", err)
+				}
 
-			// Create model directory and copy model files
-			modelDir := filepath.Dir(ModelXMLPath)
-			if err := os.MkdirAll(modelDir, 0755); err != nil {
-				return fmt.Errorf("failed to create model directory: %w", err)
-			}
+				if err := os.WriteFile(ACLPath, aclContent, 0644); err != nil {
+					return fmt.Errorf("failed to write ACL.xml: %w", err)
+				}
+				fmt.Printf("ACL file installed at %s\n", ACLPath)
 
-			// Copy model XML file
-			modelXMLContent, err := templates.ReadFile("templates/DHCPAdGuardSync.xml")
-			if err != nil {
-				return fmt.Errorf("failed to read DHCPAdGuardSync.xml template: %w", err)
-			}
+				// Create model directory and copy model files
+				modelDir := filepath.Dir(ModelXMLPath)
+				if err := os.MkdirAll(modelDir, 0755); err != nil {
+					return fmt.Errorf("failed to create model directory: %w", err)
+				}
 
-			if err := os.WriteFile(ModelXMLPath, modelXMLContent, 0644); err != nil {
-				return fmt.Errorf("failed to write DHCPAdGuardSync.xml: %w", err)
-			}
-			fmt.Printf("Model XML file installed at %s\n", ModelXMLPath)
+				// Copy model XML file from plugin directory
+				modelXMLSrc := "opnsense-plugin/src/opnsense/mvc/app/models/OPNsense/DHCPAdGuardSync/DHCPAdGuardSync.xml"
+				modelXMLContent, err := os.ReadFile(modelXMLSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read DHCPAdGuardSync.xml from plugin directory: %w", err)
+				}
 
-			// Copy model PHP file
-			modelPHPContent, err := templates.ReadFile("templates/DHCPAdGuardSync.php")
-			if err != nil {
-				return fmt.Errorf("failed to read DHCPAdGuardSync.php template: %w", err)
-			}
+				if err := os.WriteFile(ModelXMLPath, modelXMLContent, 0644); err != nil {
+					return fmt.Errorf("failed to write DHCPAdGuardSync.xml: %w", err)
+				}
+				fmt.Printf("Model XML file installed at %s\n", ModelXMLPath)
 
-			if err := os.WriteFile(ModelPHPPath, modelPHPContent, 0644); err != nil {
-				return fmt.Errorf("failed to write DHCPAdGuardSync.php: %w", err)
-			}
-			fmt.Printf("Model PHP file installed at %s\n", ModelPHPPath)
+				// Copy model PHP file from plugin directory
+				modelPHPSrc := "opnsense-plugin/src/opnsense/mvc/app/models/OPNsense/DHCPAdGuardSync/DHCPAdGuardSync.php"
+				modelPHPContent, err := os.ReadFile(modelPHPSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read DHCPAdGuardSync.php from plugin directory: %w", err)
+				}
 
-			// Create API controllers directory and copy controller files
-			controllersDir := filepath.Dir(SettingsControllerPath)
-			if err := os.MkdirAll(controllersDir, 0755); err != nil {
-				return fmt.Errorf("failed to create controllers directory: %w", err)
-			}
+				if err := os.WriteFile(ModelPHPPath, modelPHPContent, 0644); err != nil {
+					return fmt.Errorf("failed to write DHCPAdGuardSync.php: %w", err)
+				}
+				fmt.Printf("Model PHP file installed at %s\n", ModelPHPPath)
 
-			// Copy settings controller
-			settingsContent, err := templates.ReadFile("templates/SettingsController.php")
-			if err != nil {
-				return fmt.Errorf("failed to read SettingsController.php template: %w", err)
-			}
+				// Create API controllers directory and copy controller files
+				controllersDir := filepath.Dir(SettingsControllerPath)
+				if err := os.MkdirAll(controllersDir, 0755); err != nil {
+					return fmt.Errorf("failed to create controllers directory: %w", err)
+				}
 
-			if err := os.WriteFile(SettingsControllerPath, settingsContent, 0644); err != nil {
-				return fmt.Errorf("failed to write SettingsController.php: %w", err)
-			}
-			fmt.Printf("Settings controller installed at %s\n", SettingsControllerPath)
+				// Copy settings controller from plugin directory
+				settingsSrc := "opnsense-plugin/src/opnsense/mvc/app/controllers/OPNsense/DHCPAdGuardSync/Api/SettingsController.php"
+				settingsContent, err := os.ReadFile(settingsSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read SettingsController.php from plugin directory: %w", err)
+				}
 
-			// Copy service controller
-			serviceContent, err := templates.ReadFile("templates/ServiceController.php")
-			if err != nil {
-				return fmt.Errorf("failed to read ServiceController.php template: %w", err)
-			}
+				if err := os.WriteFile(SettingsControllerPath, settingsContent, 0644); err != nil {
+					return fmt.Errorf("failed to write SettingsController.php: %w", err)
+				}
+				fmt.Printf("Settings controller installed at %s\n", SettingsControllerPath)
 
-			if err := os.WriteFile(ServiceControllerPath, serviceContent, 0644); err != nil {
-				return fmt.Errorf("failed to write ServiceController.php: %w", err)
-			}
-			fmt.Printf("Service controller installed at %s\n", ServiceControllerPath)
+				// Copy service controller from plugin directory
+				serviceSrc := "opnsense-plugin/src/opnsense/mvc/app/controllers/OPNsense/DHCPAdGuardSync/Api/ServiceController.php"
+				serviceContent, err := os.ReadFile(serviceSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read ServiceController.php from plugin directory: %w", err)
+				}
 
-			// Create view directory and copy view file
-			viewDir := filepath.Dir(ViewPath)
-			if err := os.MkdirAll(viewDir, 0755); err != nil {
-				return fmt.Errorf("failed to create view directory: %w", err)
-			}
+				if err := os.WriteFile(ServiceControllerPath, serviceContent, 0644); err != nil {
+					return fmt.Errorf("failed to write ServiceController.php: %w", err)
+				}
+				fmt.Printf("Service controller installed at %s\n", ServiceControllerPath)
 
-			// Copy view file
-			viewContent, err := templates.ReadFile("templates/index.volt")
-			if err != nil {
-				return fmt.Errorf("failed to read index.volt template: %w", err)
-			}
+				// Create index controller directory
+				indexControllerPath := filepath.Join(OPNsenseBasePath, "mvc/app/controllers/OPNsense/DHCPAdGuardSync/IndexController.php")
+				indexControllerDir := filepath.Dir(indexControllerPath)
+				if err := os.MkdirAll(indexControllerDir, 0755); err != nil {
+					return fmt.Errorf("failed to create index controller directory: %w", err)
+				}
 
-			if err := os.WriteFile(ViewPath, viewContent, 0644); err != nil {
-				return fmt.Errorf("failed to write index.volt: %w", err)
-			}
-			fmt.Printf("View file installed at %s\n", ViewPath)
+				// Copy index controller from plugin directory
+				indexSrc := "opnsense-plugin/src/opnsense/mvc/app/controllers/OPNsense/DHCPAdGuardSync/IndexController.php"
+				indexContent, err := os.ReadFile(indexSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read IndexController.php from plugin directory: %w", err)
+				}
 
-			// Create form directory and copy form file
-			formDir := filepath.Dir(FormPath)
-			if err := os.MkdirAll(formDir, 0755); err != nil {
-				return fmt.Errorf("failed to create form directory: %w", err)
-			}
+				if err := os.WriteFile(indexControllerPath, indexContent, 0644); err != nil {
+					return fmt.Errorf("failed to write IndexController.php: %w", err)
+				}
+				fmt.Printf("Index controller installed at %s\n", indexControllerPath)
 
-			// Copy form file
-			formContent, err := templates.ReadFile("templates/dialogSettings.xml")
-			if err != nil {
-				return fmt.Errorf("failed to read dialogSettings.xml template: %w", err)
-			}
+				// Create view directory and copy view file
+				viewDir := filepath.Dir(ViewPath)
+				if err := os.MkdirAll(viewDir, 0755); err != nil {
+					return fmt.Errorf("failed to create view directory: %w", err)
+				}
 
-			if err := os.WriteFile(FormPath, formContent, 0644); err != nil {
-				return fmt.Errorf("failed to write dialogSettings.xml: %w", err)
+				// Copy view file from plugin directory
+				viewSrc := "opnsense-plugin/src/opnsense/mvc/app/views/OPNsense/DHCPAdGuardSync/index.volt"
+				viewContent, err := os.ReadFile(viewSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read index.volt from plugin directory: %w", err)
+				}
+
+				if err := os.WriteFile(ViewPath, viewContent, 0644); err != nil {
+					return fmt.Errorf("failed to write index.volt: %w", err)
+				}
+				fmt.Printf("View file installed at %s\n", ViewPath)
+
+				// Create form directory and copy form file
+				formDir := filepath.Dir(FormPath)
+				if err := os.MkdirAll(formDir, 0755); err != nil {
+					return fmt.Errorf("failed to create form directory: %w", err)
+				}
+
+				// Copy form file from plugin directory
+				formSrc := "opnsense-plugin/src/opnsense/mvc/app/controllers/OPNsense/DHCPAdGuardSync/forms/dialogSettings.xml"
+				formContent, err := os.ReadFile(formSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read dialogSettings.xml from plugin directory: %w", err)
+				}
+
+				if err := os.WriteFile(FormPath, formContent, 0644); err != nil {
+					return fmt.Errorf("failed to write dialogSettings.xml: %w", err)
+				}
+				fmt.Printf("Form file installed at %s\n", FormPath)
+
+				// Create actions directory
+				actionsDir := filepath.Join(OPNsenseBasePath, "service/conf/actions.d")
+				if err := os.MkdirAll(actionsDir, 0755); err != nil {
+					return fmt.Errorf("failed to create actions directory: %w", err)
+				}
+
+				// Copy actions file from plugin directory
+				actionsSrc := "opnsense-plugin/src/opnsense/service/conf/actions.d/actions_dhcpadguardsync.conf"
+				actionsContent, err := os.ReadFile(actionsSrc)
+				if err != nil {
+					return fmt.Errorf("failed to read actions_dhcpadguardsync.conf from plugin directory: %w", err)
+				}
+
+				if err := os.WriteFile(filepath.Join(actionsDir, "actions_dhcpadguardsync.conf"), actionsContent, 0644); err != nil {
+					return fmt.Errorf("failed to write actions_dhcpadguardsync.conf: %w", err)
+				}
+				fmt.Printf("Actions file installed at %s\n", filepath.Join(actionsDir, "actions_dhcpadguardsync.conf"))
 			}
-			fmt.Printf("Form file installed at %s\n", FormPath)
 
 			// Enable the service
 			if err := exec.Command("service", "dhcp-adguard-sync", "enable").Run(); err != nil {
 				return fmt.Errorf("failed to enable service: %w", err)
 			}
 		}
-
 		if installDryRun {
 			fmt.Println("\n=== Dry Run Complete ===")
 			fmt.Println("No changes were made to your system.")

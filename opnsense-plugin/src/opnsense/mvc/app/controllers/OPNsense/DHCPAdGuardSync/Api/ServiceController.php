@@ -1,5 +1,6 @@
 <?php
 namespace OPNsense\DHCPAdGuardSync\Api;
+
 use OPNsense\Base\ApiControllerBase;
 use OPNsense\Core\Backend;
 
@@ -9,7 +10,7 @@ class ServiceController extends ApiControllerBase
     {
         $backend = new Backend();
         $response = $backend->configdRun("dhcpadguardsync status");
-        return array("status" => $response);
+        return array("response" => $response);
     }
 
     public function startAction()
@@ -23,6 +24,20 @@ class ServiceController extends ApiControllerBase
     {
         $backend = new Backend();
         $response = $backend->configdRun("dhcpadguardsync stop");
+        return array("response" => $response);
+    }
+
+    public function restartAction()
+    {
+        $backend = new Backend();
+        $response = $backend->configdRun("dhcpadguardsync restart");
+        return array("response" => $response);
+    }
+
+    public function logsAction()
+    {
+        $backend = new Backend();
+        $response = $backend->configdRun("dhcpadguardsync logs");
         return array("response" => $response);
     }
 }

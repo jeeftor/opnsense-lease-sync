@@ -1,57 +1,49 @@
 <?xml version="1.0"?>
 <model>
-    <mount>//dhcpadguardsync</mount>
-    <description>DHCP AdGuard Sync configuration</description>
+    <mount>//OPNsense/DHCPAdGuardSync</mount>
+    <description>DHCP AdGuard Sync settings</description>
     <version>1.0.0</version>
     <items>
-        <general>
+        <settings>
             <enabled type="BooleanField">
-                <default>0</default>
+                <default>1</default>
                 <Required>Y</Required>
             </enabled>
-            <adguard_url type="TextField">
+            <adguardUrl type="TextField">
                 <default>127.0.0.1:3000</default>
                 <Required>Y</Required>
-                <mask>/^.+$/</mask>
-                <ValidationMessage>Please provide a valid URL</ValidationMessage>
-            </adguard_url>
-            <adguard_username type="TextField">
-                <default>admin</default>
+            </adguardUrl>
+            <username type="TextField">
                 <Required>Y</Required>
-            </adguard_username>
-            <adguard_password type="TextField">
-                <default></default>
+            </username>
+            <password type="TextField">
                 <Required>Y</Required>
-            </adguard_password>
-            <adguard_scheme type="OptionField">
+            </password>
+            <scheme type="OptionField">
                 <default>http</default>
                 <Required>Y</Required>
                 <OptionValues>
                     <http>HTTP</http>
                     <https>HTTPS</https>
                 </OptionValues>
-            </adguard_scheme>
-            <lease_path type="TextField">
+            </scheme>
+            <leasePath type="TextField">
                 <default>/var/dhcpd/var/db/dhcpd.leases</default>
                 <Required>Y</Required>
-            </lease_path>
-            <lease_format type="OptionField">
+            </leasePath>
+            <leaseFormat type="OptionField">
                 <default>isc</default>
                 <Required>Y</Required>
                 <OptionValues>
                     <isc>ISC DHCP</isc>
-                    <dnsmasq>DNSMasq</dnsmasq>
+                    <dnsmasq>Dnsmasq</dnsmasq>
                 </OptionValues>
-            </lease_format>
-            <preserve_deleted_hosts type="BooleanField">
+            </leaseFormat>
+            <preserveDeletedHosts type="BooleanField">
                 <default>0</default>
-                <Required>Y</Required>
-            </preserve_deleted_hosts>
-            <debug type="BooleanField">
-                <default>0</default>
-                <Required>Y</Required>
-            </debug>
-            <log_level type="OptionField">
+                <Required>N</Required>
+            </preserveDeletedHosts>
+            <logLevel type="OptionField">
                 <default>info</default>
                 <Required>Y</Required>
                 <OptionValues>
@@ -60,7 +52,7 @@
                     <info>Info</info>
                     <debug>Debug</debug>
                 </OptionValues>
-            </log_level>
-        </general>
+            </logLevel>
+        </settings>
     </items>
 </model>

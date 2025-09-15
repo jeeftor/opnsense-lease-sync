@@ -11,20 +11,19 @@
                $('.selectpicker').selectpicker('refresh');
            });
 
-           // DHCP Server type change handler
-           $("#dhcpadguardsync\\.general\\.dhcp_server").change(function(){
-               var serverType = $(this).val();
-               var leasePathField = $("#dhcpadguardsync\\.general\\.lease_path");
-               var leaseFormatField = $("#dhcpadguardsync\\.general\\.lease_format");
-
-               if (serverType === 'isc') {
-                   leasePathField.val('/var/dhcpd/var/db/dhcpd.leases');
-                   leaseFormatField.val('isc').trigger('change');
-               } else if (serverType === 'dnsmasq') {
-                   leasePathField.val('/var/db/dnsmasq.leases');
-                   leaseFormatField.val('dnsmasq').trigger('change');
-               }
-               // For 'custom', leave fields as-is for manual configuration
+           // Auto-save and restart on settings change
+           $("#saveAct").click(function(){
+               $("#saveAct_progress").addClass("fa fa-spinner fa-pulse");
+               saveFormToEndpoint(url="/api/dhcpadguardsync/settings/set", formid='frm_settings',callback_ok=function(){
+                   $("#responseMsg").removeClass("hidden").html("{{ lang._('Settings saved and service restarted.') }}");
+                   $("#saveAct_progress").removeClass("fa fa-spinner fa-pulse");
+                   // Auto-restart service after save
+                   ajaxCall(url="/api/dhcpadguardsync/service/restart", sendData={}, callback=function(data,status) {
+                       $("#serviceOutput").text("Service restarted: " + data['response']);
+                   });
+               }, callback_fail=function(){
+                   $("#saveAct_progress").removeClass("fa fa-spinner fa-pulse");
+               });
            });
 
            // Service control buttons
@@ -52,12 +51,6 @@
                });
            });
 
-           // Save settings
-           $("#saveAct").click(function(){
-               saveFormToEndpoint(url="/api/dhcpadguardsync/settings/set", formid='frm_settings',callback_ok=function(){
-                   $("#responseMsg").removeClass("hidden").html("{{ lang._('Settings saved. Please apply changes to activate.') }}");
-               });
-           });
 
            // Test configuration
            $("#testAct").click(function(){

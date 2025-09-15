@@ -40,4 +40,11 @@ class ServiceController extends ApiControllerBase
         $response = $backend->configdRun("dhcpadguardsync logs");
         return array("response" => $response);
     }
+
+    public function testAction()
+    {
+        $backend = new Backend();
+        $response = $backend->configdRun("dhcpadguardsync test");
+        return array("response" => $response);
+    }
 }

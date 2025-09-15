@@ -4,55 +4,29 @@
     <description>DHCP AdGuard Sync settings</description>
     <version>1.0.0</version>
     <items>
-        <settings>
+        <general>
             <enabled type="BooleanField">
                 <default>1</default>
                 <Required>Y</Required>
             </enabled>
-            <adguardUrl type="TextField">
+            <adguard_url type="TextField">
                 <default>127.0.0.1:3000</default>
                 <Required>Y</Required>
-            </adguardUrl>
-            <username type="TextField">
+            </adguard_url>
+            <adguard_username type="TextField">
                 <Required>Y</Required>
-            </username>
-            <password type="TextField">
+            </adguard_username>
+            <adguard_password type="TextField">
                 <Required>Y</Required>
-            </password>
-            <scheme type="OptionField">
-                <default>http</default>
-                <Required>Y</Required>
-                <OptionValues>
-                    <http>HTTP</http>
-                    <https>HTTPS</https>
-                </OptionValues>
-            </scheme>
-            <leasePath type="TextField">
-                <default>/var/dhcpd/var/db/dhcpd.leases</default>
-                <Required>Y</Required>
-            </leasePath>
-            <leaseFormat type="OptionField">
-                <default>isc</default>
+            </adguard_password>
+            <dhcp_server type="OptionField">
+                <default>dnsmasq</default>
                 <Required>Y</Required>
                 <OptionValues>
-                    <isc>ISC DHCP</isc>
-                    <dnsmasq>Dnsmasq</dnsmasq>
+                    <dnsmasq>DNSMasq (Default)</dnsmasq>
+                    <isc>ISC DHCP (Legacy)</isc>
                 </OptionValues>
-            </leaseFormat>
-            <preserveDeletedHosts type="BooleanField">
-                <default>0</default>
-                <Required>N</Required>
-            </preserveDeletedHosts>
-            <logLevel type="OptionField">
-                <default>info</default>
-                <Required>Y</Required>
-                <OptionValues>
-                    <error>Error</error>
-                    <warn>Warning</warn>
-                    <info>Info</info>
-                    <debug>Debug</debug>
-                </OptionValues>
-            </logLevel>
-        </settings>
+            </dhcp_server>
+        </general>
     </items>
 </model>

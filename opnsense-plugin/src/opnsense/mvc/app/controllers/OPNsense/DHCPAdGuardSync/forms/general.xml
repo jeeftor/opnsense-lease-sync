@@ -25,68 +25,14 @@
         <help>AdGuard Home password for authentication</help>
     </field>
     <field>
-        <id>dhcpadguardsync.general.adguard_scheme</id>
-        <label>Connection Scheme</label>
-        <type>dropdown</type>
-        <help>Connection scheme (HTTP or HTTPS)</help>
-        <default>http</default>
-        <options>
-            <option value="http">HTTP</option>
-            <option value="https">HTTPS</option>
-        </options>
-    </field>
-    <field>
         <id>dhcpadguardsync.general.dhcp_server</id>
         <label>DHCP Server Type</label>
         <type>dropdown</type>
-        <help>Select your DHCP server type (automatically sets lease file path and format)</help>
-        <default>isc</default>
+        <help>Select your DHCP server type</help>
+        <default>dnsmasq</default>
         <options>
-            <option value="isc">ISC DHCP (OPNsense default)</option>
-            <option value="dnsmasq">DNSMasq</option>
-            <option value="custom">Custom (manual configuration)</option>
-        </options>
-    </field>
-    <field>
-        <id>dhcpadguardsync.general.lease_path</id>
-        <label>DHCP Lease File Path</label>
-        <type>text</type>
-        <help>Path to the DHCP lease file (auto-filled based on DHCP server type)</help>
-    </field>
-    <field>
-        <id>dhcpadguardsync.general.lease_format</id>
-        <label>Lease File Format</label>
-        <type>dropdown</type>
-        <help>Format of the DHCP lease file (auto-selected based on DHCP server type)</help>
-        <default>isc</default>
-        <options>
-            <option value="isc">ISC DHCP</option>
-            <option value="dnsmasq">DNSMasq</option>
-        </options>
-    </field>
-    <field>
-        <id>dhcpadguardsync.general.preserve_deleted_hosts</id>
-        <label>Preserve Deleted Hosts</label>
-        <type>checkbox</type>
-        <help>Don't remove AdGuard clients when their DHCP leases expire</help>
-    </field>
-    <field>
-        <id>dhcpadguardsync.general.debug</id>
-        <label>Debug Mode</label>
-        <type>checkbox</type>
-        <help>Enable debug logging (more verbose output)</help>
-    </field>
-    <field>
-        <id>dhcpadguardsync.general.log_level</id>
-        <label>Log Level</label>
-        <type>dropdown</type>
-        <help>Log verbosity level</help>
-        <default>info</default>
-        <options>
-            <option value="error">Error</option>
-            <option value="warn">Warning</option>
-            <option value="info">Info</option>
-            <option value="debug">Debug</option>
+            <option value="dnsmasq">DNSMasq (Default)</option>
+            <option value="isc">ISC DHCP (Legacy)</option>
         </options>
     </field>
 </form>

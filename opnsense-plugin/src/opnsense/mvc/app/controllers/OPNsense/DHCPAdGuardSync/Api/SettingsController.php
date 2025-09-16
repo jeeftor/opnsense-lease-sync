@@ -1,41 +1,55 @@
 <?php
 namespace OPNsense\DHCPAdGuardSync\Api;
 
-use OPNsense\Base\ApiControllerBase;
+use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Config;
 use OPNsense\DHCPAdGuardSync\DHCPAdGuardSync;
 
-class SettingsController extends ApiControllerBase
+class SettingsController extends ApiMutableModelControllerBase
 {
-    public function getAction()
-    {
-        $result = array();
-        if ($this->request->isGet()) {
-            $mdl = new DHCPAdGuardSync();
-            $result['frm_settings'] = $mdl->getNodes();
-        }
-        return $result;
-    }
+    protected static $internalModelClass = '\OPNsense\DHCPAdGuardSync\DHCPAdGuardSync';
+    protected static $internalModelName = 'dhcpadguardsync';
 
+    /**
+     * Override the set action to handle configuration generation
+     */
     public function setAction()
     {
         $result = array("result" => "failed");
         if ($this->request->isPost()) {
-            $mdl = new DHCPAdGuardSync();
-            $mdl->setNodes($this->request->getPost("frm_settings"));
+            // Get the model
+            $mdl = $this->getModel();
 
+            // Set form data
+            $mdl->setNodes($this->request->getPost("frm_GeneralSettings"));
+
+            // Perform validation
             $validationMessages = $mdl->performValidation();
             if (count($validationMessages) == 0) {
+                // Save to config.xml
                 $mdl->serializeToConfig();
                 Config::getInstance()->save();
 
-                // Generate config file and restart service
+                // Generate configuration file
                 $this->generateConfigFile($mdl);
 
                 $result["result"] = "saved";
             } else {
                 $result["validations"] = $validationMessages;
             }
+        }
+        return $result;
+    }
+
+    /**
+     * Get configuration - use proper form name
+     */
+    public function getAction()
+    {
+        $result = array();
+        if ($this->request->isGet()) {
+            $mdl = $this->getModel();
+            $result['frm_GeneralSettings'] = $mdl->getNodes();
         }
         return $result;
     }

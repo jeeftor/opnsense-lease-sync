@@ -1,50 +1,46 @@
 <?php
 namespace OPNsense\DHCPAdGuardSync\Api;
 
-use OPNsense\Base\ApiControllerBase;
+use OPNsense\Base\ApiMutableServiceControllerBase;
+use OPNsense\DHCPAdGuardSync\DHCPAdGuardSync;
 use OPNsense\Core\Backend;
 
-class ServiceController extends ApiControllerBase
+class ServiceController extends ApiMutableServiceControllerBase
 {
-    public function statusAction()
-    {
-        $backend = new Backend();
-        $response = $backend->configdRun("dhcpadguardsync status");
-        return array("response" => $response);
-    }
+    protected static $internalServiceClass = '\OPNsense\DHCPAdGuardSync\DHCPAdGuardSync';
+    protected static $internalServiceTemplate = 'OPNsense/DHCPAdGuardSync';
+    protected static $internalServiceEnabled = 'general.enabled';
+    protected static $internalServiceName = 'dhcpadguardsync';
 
-    public function startAction()
-    {
-        $backend = new Backend();
-        $response = $backend->configdRun("dhcpadguardsync start");
-        return array("response" => $response);
-    }
-
-    public function stopAction()
-    {
-        $backend = new Backend();
-        $response = $backend->configdRun("dhcpadguardsync stop");
-        return array("response" => $response);
-    }
-
-    public function restartAction()
-    {
-        $backend = new Backend();
-        $response = $backend->configdRun("dhcpadguardsync restart");
-        return array("response" => $response);
-    }
-
-    public function logsAction()
-    {
-        $backend = new Backend();
-        $response = $backend->configdRun("dhcpadguardsync logs");
-        return array("response" => $response);
-    }
-
+    /**
+     * Additional custom action for testing configuration
+     */
     public function testAction()
     {
-        $backend = new Backend();
-        $response = $backend->configdRun("dhcpadguardsync test");
-        return array("response" => $response);
+        $result = array("result" => "failed");
+        if ($this->request->isPost()) {
+            $backend = new Backend();
+            $response = $backend->configdRun("dhcpadguardsync test");
+            if (strpos($response, "OK") !== false || strpos($response, "success") !== false) {
+                $result['result'] = 'ok';
+            }
+            $result['response'] = $response;
+        }
+        return $result;
+    }
+
+    /**
+     * Get service logs
+     */
+    public function logsAction()
+    {
+        $result = array("result" => "failed");
+        if ($this->request->isPost()) {
+            $backend = new Backend();
+            $response = $backend->configdRun("dhcpadguardsync logs");
+            $result['response'] = $response;
+            $result['result'] = 'ok';
+        }
+        return $result;
     }
 }

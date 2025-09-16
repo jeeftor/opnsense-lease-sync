@@ -86,13 +86,22 @@ class SettingsController extends ApiMutableModelControllerBase
         $config = $model->getNodes();
         $general = $config['general'];
 
+        // Helper function to safely extract string values
+        $getString = function($value) {
+            if (is_array($value)) {
+                return isset($value['value']) ? (string)$value['value'] : '';
+            }
+            return (string)$value;
+        };
+
         $configContent = "# DHCP AdGuard Sync Configuration\n";
-        $configContent .= "ADGUARD_USERNAME=\"" . (string)$general['adguard_username'] . "\"\n";
-        $configContent .= "ADGUARD_PASSWORD=\"" . (string)$general['adguard_password'] . "\"\n";
-        $configContent .= "ADGUARD_URL=\"" . (string)$general['adguard_url'] . "\"\n";
+        $configContent .= "ADGUARD_USERNAME=\"" . $getString($general['adguard_username']) . "\"\n";
+        $configContent .= "ADGUARD_PASSWORD=\"" . $getString($general['adguard_password']) . "\"\n";
+        $configContent .= "ADGUARD_URL=\"" . $getString($general['adguard_url']) . "\"\n";
         $configContent .= "ADGUARD_SCHEME=\"http\"\n";
 
-        if ((string)$general['dhcp_server'] === 'dnsmasq') {
+        $dhcpServer = $getString($general['dhcp_server']);
+        if ($dhcpServer === 'dnsmasq') {
             $configContent .= "DHCP_LEASE_PATH=\"/var/db/dnsmasq.leases\"\n";
             $configContent .= "LEASE_FORMAT=\"dnsmasq\"\n";
         } else {

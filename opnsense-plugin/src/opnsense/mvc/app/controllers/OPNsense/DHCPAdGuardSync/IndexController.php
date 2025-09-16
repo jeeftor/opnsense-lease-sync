@@ -28,7 +28,6 @@
 
 namespace OPNsense\DHCPAdGuardSync;
 
-use OPNsense\Base\IndexController;
 use OPNsense\Core\Config;
 
 class IndexController extends \OPNsense\Base\IndexController

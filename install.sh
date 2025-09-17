@@ -1,81 +1,71 @@
 #!/bin/sh
 set -e  # Exit on any error
 
-# Colors for better visibility
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-NC='\033[0m' # No Color
-
-echo "${CYAN}🚀 Starting DHCP AdGuard Sync installation...${NC}"
-echo "${BLUE}================================================${NC}"
+echo "Starting DHCP AdGuard Sync installation..."
+echo "================================================"
 
 # Set variables using uname
-echo "${WHITE}📋 Detecting system information...${NC}"
+echo "📋 Detecting system information..."
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
-echo "${GREEN}  ✓ Operating System: ${YELLOW}${OS}${NC}"
-echo "${GREEN}  ✓ Architecture: ${YELLOW}${ARCH}${NC}"
+echo "  ✓ Operating System: ${OS}"
+echo "  ✓ Architecture: ${ARCH}"
 
 REPO="jeeftor/opnsense-lease-sync"
 TEMP_DIR="/tmp/dhcp-adguard-sync-install"
 BINARY_NAME="dhcp-adguard-sync"
 
-echo "${GREEN}  ✓ Using repository: ${YELLOW}${REPO}${NC}"
-echo "${GREEN}  ✓ Temporary directory: ${YELLOW}${TEMP_DIR}${NC}"
-echo "${GREEN}  ✓ Binary name: ${YELLOW}${BINARY_NAME}${NC}"
-echo "${BLUE}------------------------------------------------${NC}"
+echo "  ✓ Using repository: ${REPO}"
+echo "  ✓ Temporary directory: ${TEMP_DIR}"
+echo "  ✓ Binary name: ${BINARY_NAME}"
+echo "------------------------------------------------"
 
 # Fetch latest release version from GitHub API
-echo "${WHITE}📡 Fetching latest release information from GitHub...${NC}"
+echo "📡 Fetching latest release information from GitHub..."
 VERSION=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
 # Check if version was successfully retrieved
 if [ -z "$VERSION" ]; then
-    echo "${RED}❌ ERROR: Failed to fetch latest version${NC}"
+    echo "❌ ERROR: Failed to fetch latest version"
     exit 1
 fi
 
-echo "${GREEN}  ✓ Found version: ${YELLOW}${VERSION}${NC}"
-echo "${BLUE}------------------------------------------------${NC}"
+echo "  ✓ Found version: ${VERSION}"
+echo "------------------------------------------------"
 
 # Create temp directory
-echo "${WHITE}📁 Creating temporary directory...${NC}"
+echo "📁 Creating temporary directory..."
 mkdir -p "${TEMP_DIR}"
-echo "${GREEN}  ✓ Created: ${YELLOW}${TEMP_DIR}${NC}"
+echo "  ✓ Created: ${TEMP_DIR}"
 
 # Construct download URL (using .tar.gz)
 URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar.gz"
-echo "${WHITE}🔗 Constructing download URL...${NC}"
-echo "${GREEN}  ✓ URL: ${YELLOW}${URL}${NC}"
-echo "${BLUE}------------------------------------------------${NC}"
+echo "🔗 Constructing download URL..."
+echo "  ✓ URL: ${URL}"
+echo "------------------------------------------------"
 
 # Download and extract to temp directory
-echo "${WHITE}⬇️  Downloading release package...${NC}"
+echo "⬇️  Downloading release package..."
 curl -L -s -o "${TEMP_DIR}/dhcp-adguard-sync.tar.gz" "$URL"
-echo "${GREEN}  ✓ Download complete${NC}"
+echo "  ✓ Download complete"
 
-echo "${WHITE}📦 Extracting package...${NC}"
+echo "📦 Extracting package..."
 tar xfz "${TEMP_DIR}/dhcp-adguard-sync.tar.gz" -C "${TEMP_DIR}"
-echo "${GREEN}  ✓ Extraction complete${NC}"
-echo "${BLUE}------------------------------------------------${NC}"
+echo "  ✓ Extraction complete"
+echo "------------------------------------------------"
 
 # Make the binary executable
-echo "${WHITE}🔧 Setting executable permissions...${NC}"
+echo "🔧 Setting executable permissions..."
 chmod +x "${TEMP_DIR}/${BINARY_NAME}"
-echo "${GREEN}  ✓ Permissions set${NC}"
-echo "${BLUE}------------------------------------------------${NC}"
+echo "  ✓ Permissions set"
+echo "------------------------------------------------"
 
 # Check for existing configuration
 CONFIG_PATH="/usr/local/etc/dhcp-adguard-sync/config.yaml"
 if [ -f "$CONFIG_PATH" ]; then
-    echo "${YELLOW}⚠️  Existing configuration found at: ${CYAN}$CONFIG_PATH${NC}"
-    echo "${YELLOW}   Installation will preserve existing configuration.${NC}"
-    echo "${BLUE}------------------------------------------------${NC}"
+    echo "⚠️  Existing configuration found at: $CONFIG_PATH"
+    echo "   Installation will preserve existing configuration."
+    echo "------------------------------------------------"
 fi
 
 # Check if this is an interactive session
@@ -140,6 +130,12 @@ if [ -t 0 ]; then
 
     # Install with provided credentials
     if "${TEMP_DIR}/${BINARY_NAME}" install --username "$ADGUARD_USERNAME" --password "$ADGUARD_PASSWORD" --adguard-url "$ADGUARD_URL" "$@"; then
+        echo "* Service installation complete"
+    else
+        echo "* Installation failed"
+        rm -rf "${TEMP_DIR}"
+        exit 1
+    fi
 else
     # Non-interactive mode (piped from curl)
     echo "⚠️  Non-interactive installation detected"

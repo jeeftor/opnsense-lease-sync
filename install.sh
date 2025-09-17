@@ -60,11 +60,38 @@ chmod +x "${TEMP_DIR}/${BINARY_NAME}"
 echo "* Permissions set"
 echo "--------------------------------"
 
+# Prompt for AdGuard Home credentials
+echo "AdGuard Home Configuration:"
+echo "Please provide your AdGuard Home credentials for configuration:"
+echo "--------------------------------"
+
+printf "AdGuard Home Username: "
+read -r ADGUARD_USERNAME
+
+printf "AdGuard Home Password: "
+# Hide password input
+if command -v stty >/dev/null 2>&1; then
+    stty -echo
+    read -r ADGUARD_PASSWORD
+    stty echo
+    echo ""
+else
+    read -r ADGUARD_PASSWORD
+fi
+
+printf "AdGuard Home URL (default: 127.0.0.1:3000): "
+read -r ADGUARD_URL
+if [ -z "$ADGUARD_URL" ]; then
+    ADGUARD_URL="127.0.0.1:3000"
+fi
+
+echo "--------------------------------"
+
 # Now run the binary's own install command
 echo "Running service installation..."
 
 # First attempt to run the installer directly
-if "${TEMP_DIR}/${BINARY_NAME}" install "$@"; then
+if "${TEMP_DIR}/${BINARY_NAME}" install --username "$ADGUARD_USERNAME" --password "$ADGUARD_PASSWORD" --adguard-url "$ADGUARD_URL" "$@"; then
     echo "* Service installation complete"
 else
     # If installation fails, it might be due to "text file busy" error
@@ -95,7 +122,7 @@ else
 
             # Try installation again after stopping the service
             echo "* Retrying installation after stopping service..."
-            if "${TEMP_DIR}/${BINARY_NAME}" install "$@"; then
+            if "${TEMP_DIR}/${BINARY_NAME}" install --username "$ADGUARD_USERNAME" --password "$ADGUARD_PASSWORD" --adguard-url "$ADGUARD_URL" "$@"; then
                 echo "* Service installation complete"
             else
                 RESULT=$?

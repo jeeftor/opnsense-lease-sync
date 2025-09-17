@@ -69,13 +69,14 @@ printf "AdGuard Home Username: "
 read -r ADGUARD_USERNAME
 
 printf "AdGuard Home Password: "
-# Hide password input
-if command -v stty >/dev/null 2>&1; then
-    stty -echo
+# Hide password input if we have a proper TTY
+if [ -t 0 ] && command -v stty >/dev/null 2>&1; then
+    stty -echo 2>/dev/null
     read -r ADGUARD_PASSWORD
-    stty echo
+    stty echo 2>/dev/null
     echo ""
 else
+    # No TTY or stty not available, just read normally
     read -r ADGUARD_PASSWORD
 fi
 

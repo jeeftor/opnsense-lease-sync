@@ -86,8 +86,13 @@ if [ -z "$ADGUARD_URL" ]; then
     ADGUARD_URL="127.0.0.1:3000"
 fi
 
+echo "--------------------------------"
+
 # Test AdGuard Home connection
 echo "Testing AdGuard Home connection..."
+echo "* Username: $ADGUARD_USERNAME"
+echo "* URL: $ADGUARD_URL"
+
 SCHEME="http"
 if echo "$ADGUARD_URL" | grep -q "443"; then
     SCHEME="https"

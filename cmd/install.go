@@ -183,13 +183,11 @@ Use --dry-run to preview what would be written without making any changes.`,
 				return fmt.Errorf("failed to create rc.d script: %w", err)
 			}
 
-			// Note: OPNsense plugin installation is handled separately
-			// Use the install script or manual plugin installation
+			// Note: Plugin installation is now separate from service installation
 			if _, err := os.Stat("/usr/local/opnsense"); err == nil {
 				fmt.Println("\nOPNsense detected!")
-				fmt.Println("To install the web UI plugin, use:")
-				fmt.Println("  curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh")
-				fmt.Println("Or follow the manual plugin installation instructions in the README.")
+				fmt.Println("Note: Web UI plugin installation is separate from service installation.")
+				fmt.Println("See the README for manual plugin installation instructions.")
 			}
 
 			// Enable the service

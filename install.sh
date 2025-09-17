@@ -85,6 +85,37 @@ if [ -z "$ADGUARD_URL" ]; then
     ADGUARD_URL="127.0.0.1:3000"
 fi
 
+# Test AdGuard Home connection
+echo "Testing AdGuard Home connection..."
+SCHEME="http"
+if echo "$ADGUARD_URL" | grep -q "443"; then
+    SCHEME="https"
+fi
+
+# Simple connection test using curl
+TEST_URL="${SCHEME}://${ADGUARD_URL}/control/status"
+echo "* Testing connection to: $TEST_URL"
+
+if curl -s --connect-timeout 5 --max-time 10 -u "${ADGUARD_USERNAME}:${ADGUARD_PASSWORD}" "$TEST_URL" >/dev/null 2>&1; then
+    echo "* ✓ AdGuard Home connection successful"
+else
+    echo "* ✗ AdGuard Home connection failed"
+    echo ""
+    echo "This could mean:"
+    echo "  - AdGuard Home is not running"
+    echo "  - Wrong URL, username, or password"
+    echo "  - Network connectivity issues"
+    echo ""
+    printf "Continue with installation anyway? (y/n): "
+    read -r CONTINUE
+    if [ "$CONTINUE" != "y" ] && [ "$CONTINUE" != "Y" ]; then
+        echo "Installation cancelled."
+        rm -rf "${TEMP_DIR}"
+        exit 1
+    fi
+    echo "* Continuing with installation..."
+fi
+
 echo "--------------------------------"
 
 # Now run the binary's own install command
@@ -148,16 +179,6 @@ fi
 
 echo "--------------------------------"
 
-# Note: Plugin installation has been removed from this installer
-# The install command now only installs the service component
-if [ -f "/usr/local/opnsense/version/opnsense" ]; then
-    echo "OPNsense detected!"
-    echo ""
-    echo "Note: Plugin installation has been separated from service installation."
-    echo "The web UI plugin must be installed manually for now."
-    echo "See the README for plugin installation instructions."
-    echo "--------------------------------"
-fi
 
 # Clean up
 echo "Cleaning up temporary files..."
@@ -168,10 +189,15 @@ echo "--------------------------------"
 echo "Installation complete!"
 echo ""
 echo "NEXT STEPS:"
-echo "1. Edit the configuration file:"
-echo "   sudo nano /usr/local/etc/dhcp-adguard-sync/config.yaml"
-echo "   sudo vim /usr/local/etc/dhcp-adguard-sync/config.yaml"
+echo "1. Start the service:"
+echo "   service dhcp-adguard-sync start"
 echo ""
-echo "2. Start the service:"
-echo "   /usr/sbin/service dhcp-adguard-sync start"
+echo "2. Check service status:"
+echo "   service dhcp-adguard-sync status"
+echo ""
+echo "3. View logs:"
+echo "   tail -f /var/log/dhcp-adguard-sync.log"
+echo ""
+echo "4. (Optional) Edit configuration if needed:"
+echo "   vi /usr/local/etc/dhcp-adguard-sync/config.yaml"
 echo "--------------------------------"

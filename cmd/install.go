@@ -183,12 +183,6 @@ Use --dry-run to preview what would be written without making any changes.`,
 				return fmt.Errorf("failed to create rc.d script: %w", err)
 			}
 
-			// Note: Plugin installation is now separate from service installation
-			if _, err := os.Stat("/usr/local/opnsense"); err == nil {
-				fmt.Println("\nOPNsense detected!")
-				fmt.Println("Note: Web UI plugin installation is separate from service installation.")
-				fmt.Println("See the README for manual plugin installation instructions.")
-			}
 
 			// Enable the service
 			if err := exec.Command("service", "dhcp-adguard-sync", "enable").Run(); err != nil {

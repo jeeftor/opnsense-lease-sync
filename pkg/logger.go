@@ -155,7 +155,7 @@ func (l *DualLogger) log(level LogLevel, msg string) {
 		// Log to file/stdout if we have a file logger (unless syslog-only mode)
 		if l.fileLogger != nil {
 			if l.bsdFormat {
-				// BSD syslog format: <priority>MMM DD HH:MM:SS hostname process[pid]: message
+				// OPNsense RFC5424 format: <priority>version ISO_timestamp hostname process[pid]: message
 				// Priority = facility * 8 + severity
 				// Using daemon (3) facility: 3 * 8 = 24
 				// Severity: 0=emergency, 1=alert, 2=critical, 3=error, 4=warning, 5=notice, 6=info, 7=debug
@@ -173,9 +173,14 @@ func (l *DualLogger) log(level LogLevel, msg string) {
 					priority = 24 + 6 // daemon.info (30)
 				}
 
-				timestamp := time.Now().Format("Jan 02 15:04:05")
+				now := time.Now()
+				isoTimestamp := now.Format("2006-01-02T15:04:05-07:00")
+				bsdTimestamp := now.Format("Jan 02 15:04:05")
 				pid := os.Getpid()
-				bsdMsg := fmt.Sprintf("<%d>%s %s dhcpsync[%d]: %s", priority, timestamp, l.hostname, pid, msg)
+
+				// RFC5424 format like OPNsense: <priority>1 ISO_timestamp hostname - - [meta] <priority>[pid] BSD_timestamp hostname process[pid]: message
+				bsdMsg := fmt.Sprintf("<%d>1 %s %s kernel - - [meta sequenceId=\"1\"] <%d>[%d] %s %s dhcpsync[%d]: %s",
+					priority, isoTimestamp, l.hostname, priority, pid, bsdTimestamp, l.hostname, pid, msg)
 				l.fileLogger.Output(2, bsdMsg)
 			} else {
 				// Standard format with log level

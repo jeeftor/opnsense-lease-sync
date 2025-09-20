@@ -30,7 +30,7 @@ func isProcessRunning(pid int) bool {
 
 // isServiceRunning checks if the service is currently running
 func isServiceRunning() (bool, int) {
-	pidfile := "/var/run/dhcp_adguard_sync.pid"
+	pidfile := "/var/run/dhcpsync.pid"
 
 	// Check if pidfile exists
 	content, err := os.ReadFile(pidfile)
@@ -70,7 +70,7 @@ func stopService() error {
 	fmt.Printf("Service is running with PID %d\n", pid)
 	fmt.Println("Attempting graceful service stop...")
 
-	stopCmd := exec.Command("service", "dhcp-adguard-sync", "stop")
+	stopCmd := exec.Command("service", "dhcpsync", "stop")
 	stopCmd.Start()
 
 	// Give it some time to stop gracefully
@@ -105,7 +105,7 @@ func stopService() error {
 	}
 
 	// Clean up pidfile
-	pidfile := "/var/run/dhcp_adguard_sync.pid"
+	pidfile := "/var/run/dhcpsync.pid"
 	if err := os.Remove(pidfile); err != nil && !os.IsNotExist(err) {
 		fmt.Printf("Warning: Failed to remove pidfile: %v\n", err)
 	}
@@ -125,7 +125,7 @@ func (e *cleanError) Error() string {
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Uninstall the service and optionally remove configuration",
-	Long: `Uninstall dhcp-adguard-sync service and files.
+	Long: `Uninstall dhcpsync service and files.
 This will:
 1. Stop and disable the service
 2. Remove the rc.d service script
@@ -139,7 +139,7 @@ This will:
 			return err
 		}
 
-		if err := exec.Command("service", "dhcp-adguard-sync", "disable").Run(); err != nil && !forceful {
+		if err := exec.Command("service", "dhcpsync", "disable").Run(); err != nil && !forceful {
 			return &cleanError{message: fmt.Sprintf("failed to disable service: %v", err)}
 		}
 
@@ -153,6 +153,19 @@ This will:
 		fmt.Println("Removing binary...")
 		if err := os.Remove(InstallPath); err != nil && !os.IsNotExist(err) && !forceful {
 			return &cleanError{message: fmt.Sprintf("failed to remove binary: %v", err)}
+		}
+
+		// Remove syslog configuration
+		fmt.Println("Removing syslog configuration...")
+		if err := os.Remove(SyslogPath); err != nil && !os.IsNotExist(err) && !forceful {
+			return &cleanError{message: fmt.Sprintf("failed to remove syslog configuration: %v", err)}
+		}
+
+		// Restart syslogd to remove the configuration
+		fmt.Println("Restarting syslogd...")
+		if err := exec.Command("service", "syslogd", "restart").Run(); err != nil {
+			fmt.Printf("Warning: failed to restart syslogd: %v\n", err)
+			fmt.Println("You may need to manually restart syslogd: service syslogd restart")
 		}
 
 		// Optionally remove config directory
@@ -172,9 +185,17 @@ This will:
 }
 
 func init() {
-	rootCmd.AddCommand(uninstallCmd)
-
 	// Add flags
 	uninstallCmd.Flags().BoolVar(&removeConfig, "remove-config", false, "Remove configuration directory")
 	uninstallCmd.Flags().BoolVar(&forceful, "force", false, "Continue even if errors occur and force process termination")
+
+	// Hide irrelevant global flags for uninstall command
+	uninstallCmd.InheritedFlags().MarkHidden("username")
+	uninstallCmd.InheritedFlags().MarkHidden("password")
+	uninstallCmd.InheritedFlags().MarkHidden("adguard-url")
+	uninstallCmd.InheritedFlags().MarkHidden("scheme")
+	uninstallCmd.InheritedFlags().MarkHidden("timeout")
+	uninstallCmd.InheritedFlags().MarkHidden("lease-path")
+	uninstallCmd.InheritedFlags().MarkHidden("lease-format")
+	uninstallCmd.InheritedFlags().MarkHidden("preserve-deleted-hosts")
 }

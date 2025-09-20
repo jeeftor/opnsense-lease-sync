@@ -1,66 +1,34 @@
 #!/bin/sh
 
-# PROVIDE: dhcp_adguard_sync
+# PROVIDE: dhcpsync
 # REQUIRE: NETWORKING
 # KEYWORD: shutdown
 
 . /etc/rc.subr
 
-name="dhcp_adguard_sync"
+name="dhcpsync"
 desc="DHCP to AdGuard Home Sync Service"
-rcvar="dhcp_adguard_sync_enable"
+rcvar="dhcpsync_enable"
 
-# Load config file if it exists
+# Load config from rc.conf
 load_rc_config $name
 
 # Default values
-: ${dhcp_adguard_sync_enable:="NO"}
-: ${dhcp_adguard_sync_config:="/usr/local/etc/dhcp-adguard-sync/config.yaml"}
-: ${dhcp_adguard_sync_command:="/usr/local/bin/dhcp-adguard-sync"}
-: ${dhcp_adguard_sync_user:="root"}
+: ${dhcpsync_enable:="NO"}
+: ${dhcpsync_config:="/usr/local/etc/dhcpsync/config.env"}
+: ${dhcpsync_command:="/usr/local/bin/dhcpsync"}
+: ${dhcpsync_user:="root"}
 
 pidfile="/var/run/${name}.pid"
 command="/usr/sbin/daemon"
-command_args="-P ${pidfile} -r -f"
+command_args="-P ${pidfile} -r -f -u ${dhcpsync_user} ${dhcpsync_command} serve --syslog-only"
 
-start_cmd="${name}_start"
-stop_cmd="${name}_stop"
-status_cmd="${name}_status"
-
-# Source the config file to get environment variables
-if [ -f "${dhcp_adguard_sync_config}" ]; then
+# Source the config file to get environment variables.
+# This block runs every time the script is called.
+if [ -f "${dhcpsync_config}" ]; then
     set -a  # Mark all variables for export
-    . "${dhcp_adguard_sync_config}"
+    . "${dhcpsync_config}"
     set +a
 fi
-
-dhcp_adguard_sync_start()
-{
-    echo "Starting ${name}."
-    /usr/sbin/daemon -P ${pidfile} -r -f -u ${dhcp_adguard_sync_user} \
-        ${dhcp_adguard_sync_command} serve
-}
-
-dhcp_adguard_sync_stop()
-{
-    if [ -n "$rc_pid" ]; then
-        echo "Stopping ${name}."
-        kill -TERM $rc_pid
-        wait_for_pids $rc_pid
-    else
-        echo "${name} is not running."
-    fi
-}
-
-dhcp_adguard_sync_status()
-{
-    if [ -n "$rc_pid" ]; then
-        echo "${name} is running as pid $rc_pid."
-        return 0
-    else
-        echo "${name} is not running."
-        return 1
-    fi
-}
 
 run_rc_command "$1"

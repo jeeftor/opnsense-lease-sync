@@ -1,0 +1,37 @@
+<form>
+    <field>
+        <id>dhcpsync.general.enabled</id>
+        <label>Enabled</label>
+        <type>checkbox</type>
+        <help>Enables the DHCP AdGuard Sync service</help>
+    </field>
+    <field>
+        <id>dhcpsync.general.AdguardHomeURL</id>
+        <label>Adguard Home URL</label>
+        <type>text</type>
+        <help>URL to your Adguard Home instance - if running the OPNsense plugin this is probably http://localhost:3000</help>
+    </field>
+    <field>
+        <id>dhcpsync.general.AdguardHomeUsername</id>
+        <label>Adguard Home Username</label>
+        <type>text</type>
+        <help>Username for Adguard Home authentication</help>
+    </field>
+    <field>
+        <id>dhcpsync.general.AdguardHomePassword</id>
+        <label>Adguard Home Password</label>
+        <type>password</type>
+        <help>Password for Adguard Home authentication</help>
+    </field>
+    <field>
+        <id>dhcpsync.general.DHCPServer</id>
+        <label>DHCP Server</label>
+        <type>dropdown</type>
+        <help>Select the DHCP server type to sync with. This will inform the application where to find the lease file on disk so that it can read and update the current leases.</help>
+        <advanced>false</advanced>
+        <options>
+            <option value="dnsmasq">DNSMasq</option>
+            <option value="isc">ISC DHCPv4</option>
+        </options>
+    </field>
+</form>

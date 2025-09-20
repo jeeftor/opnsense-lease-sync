@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e  # Exit on any error
 
-echo "Starting DHCP AdGuard Sync installation..."
+echo "Starting dhcpsync installation..."
 echo "================================================"
 
 # Set variables using uname
@@ -11,9 +11,9 @@ ARCH=$(uname -m)
 echo "  * Operating System: ${OS}"
 echo "  * Architecture: ${ARCH}"
 
-REPO="jeeftor/opnsense-lease-sync"
-TEMP_DIR="/tmp/dhcp-adguard-sync-install"
-BINARY_NAME="dhcp-adguard-sync"
+REPO="jeeftor/dhcpsync"
+TEMP_DIR="/tmp/dhcpsync-install"
+BINARY_NAME="dhcpsync"
 
 echo "  * Using repository: ${REPO}"
 echo "  * Temporary directory: ${TEMP_DIR}"
@@ -39,18 +39,18 @@ mkdir -p "${TEMP_DIR}"
 echo "  * Created: ${TEMP_DIR}"
 
 # Construct download URL (using .tar.gz)
-URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcp-adguard-sync_${OS}_${ARCH}_${VERSION}.tar.gz"
+URL="https://github.com/${REPO}/releases/download/${VERSION}/dhcpsync_${OS}_${ARCH}_${VERSION}.tar.gz"
 echo "Constructing download URL..."
 echo "  * URL: ${URL}"
 echo "------------------------------------------------"
 
 # Download and extract to temp directory
 echo "Downloading release package..."
-curl -L -s -o "${TEMP_DIR}/dhcp-adguard-sync.tar.gz" "$URL"
+curl -L -s -o "${TEMP_DIR}/dhcpsync.tar.gz" "$URL"
 echo "  * Download complete"
 
 echo "Extracting package..."
-tar xfz "${TEMP_DIR}/dhcp-adguard-sync.tar.gz" -C "${TEMP_DIR}"
+tar xfz "${TEMP_DIR}/dhcpsync.tar.gz" -C "${TEMP_DIR}"
 echo "  * Extraction complete"
 echo "------------------------------------------------"
 
@@ -61,7 +61,7 @@ echo "  * Permissions set"
 echo "------------------------------------------------"
 
 # Check for existing configuration
-CONFIG_PATH="/usr/local/etc/dhcp-adguard-sync/config.yaml"
+CONFIG_PATH="/usr/local/etc/dhcpsync/config.env"
 if [ -f "$CONFIG_PATH" ]; then
     echo "WARNING: Existing configuration found at: $CONFIG_PATH"
     echo "         Installation will preserve existing configuration."
@@ -144,7 +144,7 @@ else
     echo ""
     echo "OPTIONS:"
     echo "1. Download and run manually:"
-    echo "   curl -L -o install.sh https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh"
+    echo "   curl -L -o install.sh https://raw.githubusercontent.com/jeeftor/dhcpsync/master/install.sh"
     echo "   chmod +x install.sh"
     echo "   ./install.sh"
     echo ""
@@ -160,7 +160,7 @@ else
         echo "* Service installation complete"
     else
         echo "* Installation failed - you may need to configure manually"
-        echo "* Edit config file: /usr/local/etc/dhcp-adguard-sync/config.yaml"
+        echo "* Edit config file: /usr/local/etc/dhcpsync/config.env"
     fi
 fi
 
@@ -174,17 +174,17 @@ echo "Installation complete!"
 echo ""
 echo "NEXT STEPS:"
 echo "1. Start the service:"
-echo "   service dhcp-adguard-sync start"
+echo "   service dhcpsync start"
 echo ""
 echo "2. Check service status:"
-echo "   service dhcp-adguard-sync status"
+echo "   service dhcpsync status"
 echo ""
 echo "3. View logs:"
-echo "   tail -f /var/log/dhcp-adguard-sync.log"
+echo "   tail -f /var/log/dhcpsync.log"
 echo ""
 if [ ! -t 0 ]; then
     echo "4. Edit configuration (required for non-interactive install):"
-    echo "   vi /usr/local/etc/dhcp-adguard-sync/config.yaml"
+    echo "   vi /usr/local/etc/dhcpsync/config.env"
     echo "   - Set ADGUARD_USERNAME and ADGUARD_PASSWORD"
     echo "   - Set ADGUARD_URL if not using default"
     echo ""

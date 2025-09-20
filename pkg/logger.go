@@ -65,6 +65,7 @@ type LogConfig struct {
 	Level          LogLevel
 	FilePath       string
 	SyslogFacility string
+	SyslogOnly     bool
 	MaxSize        int
 	MaxBackups     int
 	MaxAge         int
@@ -90,46 +91,50 @@ func NewLogger(cfg LogConfig) (Logger, error) {
 
 	// Setup syslog first
 	priority := syslog.LOG_INFO | getFacility(facility)
-	sysLogger, err := syslog.New(priority, "dhcp-adguard-sync")
+	sysLogger, err := syslog.New(priority, "dhcpsync")
 	if err != nil {
 		return nil, fmt.Errorf("initializing syslog: %w", err)
 	}
 	dl.sysLogger = sysLogger
 
-	// If no file path specified, default to OPNsense location
-	if cfg.FilePath == "" {
-		cfg.FilePath = "/var/log/dhcp-adguard-sync.log"
-	}
+	// Setup file/stdout logging based on configuration
+	if cfg.SyslogOnly {
+		// Syslog-only mode: no file or stdout logging
+		dl.fileLogger = nil
+	} else if cfg.FilePath != "" {
+		// File logging mode: log to specified file
+		logDir := filepath.Dir(cfg.FilePath)
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			return nil, fmt.Errorf("creating log directory: %w", err)
+		}
 
-	// Ensure log directory exists with correct permissions
-	logDir := filepath.Dir(cfg.FilePath)
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return nil, fmt.Errorf("creating log directory: %w", err)
-	}
+		// Setup file logging with rotation
+		dl.rotator = &lumberjack.Logger{
+			Filename:   cfg.FilePath,
+			MaxSize:    cfg.MaxSize,
+			MaxBackups: cfg.MaxBackups,
+			MaxAge:     cfg.MaxAge,
+			Compress:   cfg.Compress,
+		}
 
-	// Setup file logging with rotation
-	dl.rotator = &lumberjack.Logger{
-		Filename:   cfg.FilePath,
-		MaxSize:    cfg.MaxSize,
-		MaxBackups: cfg.MaxBackups,
-		MaxAge:     cfg.MaxAge,
-		Compress:   cfg.Compress,
+		// Create file logger
+		dl.fileLogger = log.New(dl.rotator, "", log.LstdFlags)
+	} else {
+		// Default mode: stdout + syslog (dual logging)
+		dl.fileLogger = log.New(os.Stdout, "", log.LstdFlags)
 	}
-
-	// Create file logger
-	dl.fileLogger = log.New(dl.rotator, "", log.LstdFlags)
 
 	return &dl, nil
 }
 
 func (l *DualLogger) log(level LogLevel, msg string) {
 	if l.level >= level {
-		// Always log to file if we have one
+		// Log to file/stdout if we have a file logger (unless syslog-only mode)
 		if l.fileLogger != nil {
 			l.fileLogger.Output(2, fmt.Sprintf("[%s] %s", level, msg))
 		}
 
-		// Also log to syslog with appropriate level
+		// Always log to syslog with appropriate level
 		if l.sysLogger != nil {
 			switch level {
 			case LogLevelError:

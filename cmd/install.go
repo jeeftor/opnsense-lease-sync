@@ -1,14 +1,19 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"syscall"
 	"text/template"
+
+	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // ConfigTemplate represents the structure for config file template
@@ -41,24 +46,86 @@ func copyFile(src, dst string) error {
 	return os.WriteFile(dst, input, 0644)
 }
 
-// installDryRun flag for dry run mode
-var installDryRun bool
+// detectDHCPService attempts to detect which DHCP service is running and returns appropriate config
+func detectDHCPService() (leasePath, leaseFormat string) {
+	// Check for DNSMasq (OPNsense default)
+	if _, err := os.Stat("/var/db/dnsmasq.leases"); err == nil {
+		return "/var/db/dnsmasq.leases", "dnsmasq"
+	}
+
+	// Check for ISC DHCP v4
+	if _, err := os.Stat("/var/dhcpd/var/db/dhcpd.leases"); err == nil {
+		return "/var/dhcpd/var/db/dhcpd.leases", "isc"
+	}
+
+	// Fallback to DNSMasq (OPNsense default)
+	return "/var/db/dnsmasq.leases", "dnsmasq"
+}
+
+// promptForInput prompts user for input with a message
+func promptForInput(prompt string) string {
+	fmt.Print(prompt)
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
+}
+
+// promptForPassword prompts for password without echoing
+func promptForPassword(prompt string) string {
+	fmt.Print(prompt)
+	bytePassword, _ := term.ReadPassword(int(syscall.Stdin))
+	fmt.Println()
+	return string(bytePassword)
+}
 
 var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Install the service and configuration files",
-	Long: `Install the dhcp-adguard-sync binary, configuration, and service files.
+	Use:          "install",
+	Short:        "Install the service and configuration files",
+	SilenceUsage: true,
+	Long: `Install the dhcpsync binary, configuration, and service files.
 This will:
 1. Copy the binary to /usr/local/bin
-2. Create a config file in /usr/local/etc/dhcp-adguard-sync with provided credentials
-3. Install the rc.d service scrip
-4. Set appropriate permissions
+2. Create a config file in /usr/local/etc/dhcpsync with provided credentials
+3. Install the rc.d service script
+4. Install syslog configuration for proper log management
+5. Set appropriate permissions
 
 Use --dry-run to preview what would be written without making any changes.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		installDryRun, _ := cmd.Flags().GetBool("dry-run")
+
 		// Check if running on FreeBSD
 		if !installDryRun && runtime.GOOS != "freebsd" {
 			return fmt.Errorf("installation is only supported on FreeBSD systems")
+		}
+
+		// Get flags for this command
+		username, _ := cmd.Flags().GetString("username")
+		password, _ := cmd.Flags().GetString("password")
+		adguardURL, _ := cmd.Flags().GetString("adguard-url")
+		leasePath, _ := cmd.Flags().GetString("lease-path")
+		leaseFormat, _ := cmd.Flags().GetString("lease-format")
+		scheme, _ := cmd.Flags().GetString("scheme")
+		timeout, _ := cmd.Flags().GetInt("timeout")
+		preserveDeletedHosts, _ := cmd.Flags().GetBool("preserve-deleted-hosts")
+		logLevel, _ := cmd.Flags().GetString("log-level")
+		logFile, _ := cmd.Flags().GetString("log-file")
+		maxLogSize, _ := cmd.Flags().GetInt("max-log-size")
+		maxBackups, _ := cmd.Flags().GetInt("max-backups")
+		maxAge, _ := cmd.Flags().GetInt("max-age")
+		noCompress, _ := cmd.Flags().GetBool("no-compress")
+
+		// Prompt for username if not provided
+		if username == "" {
+			username = promptForInput("AdGuard Home Username: ")
+			if username == "" {
+				return fmt.Errorf("username is required")
+			}
+		}
+
+		// Prompt for password if not provided
+		if password == "" {
+			password = promptForPassword("AdGuard Home Password: ")
 		}
 
 		// Get the path of the current binary
@@ -71,21 +138,38 @@ Use --dry-run to preview what would be written without making any changes.`,
 		if installDryRun {
 			fmt.Println("\n=== Binary Installation (Dry Run) ===")
 			fmt.Printf("Would copy binary from: %s\n", executable)
-			fmt.Printf("Would copy binary to: %s\n", InstallPath)
+			fmt.Printf("Would copy binary to: %s\n", "/usr/local/bin/dhcpsync")
 			fmt.Printf("Would set permissions: 0755\n")
 		} else {
 			// Create installation directory and copy binary
-			if err := os.MkdirAll(filepath.Dir(InstallPath), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir("/usr/local/bin/dhcpsync"), 0755); err != nil {
 				return fmt.Errorf("failed to create installation directory: %w", err)
 			}
-			if executable != InstallPath {
-				if err := copyFile(executable, InstallPath); err != nil {
+			if executable != "/usr/local/bin/dhcpsync" {
+				if err := copyFile(executable, "/usr/local/bin/dhcpsync"); err != nil {
 					return fmt.Errorf("failed to copy binary: %w", err)
 				}
 			}
-			if err := os.Chmod(InstallPath, 0755); err != nil {
+			if err := os.Chmod("/usr/local/bin/dhcpsync", 0755); err != nil {
 				return fmt.Errorf("failed to set binary permissions: %w", err)
 			}
+		}
+
+		// Auto-detect DHCP service if not overridden by flags
+		detectedLeasePath, detectedLeaseFormat := detectDHCPService()
+
+		// Use detected values if flags weren't explicitly set
+		finalLeasePath := leasePath
+		finalLeaseFormat := leaseFormat
+		if !cmd.Flags().Changed("lease-path") {
+			finalLeasePath = detectedLeasePath
+		}
+		if !cmd.Flags().Changed("lease-format") {
+			finalLeaseFormat = detectedLeaseFormat
+		}
+
+		if !installDryRun {
+			fmt.Printf("Auto-detected DHCP service: %s (lease file: %s)\n", finalLeaseFormat, finalLeasePath)
 		}
 
 		// Generate config from template
@@ -95,11 +179,11 @@ Use --dry-run to preview what would be written without making any changes.`,
 			Password:             password,
 			Scheme:               scheme,
 			Timeout:              timeout,
-			LeasePath:            leasePath,
-			LeaseFormat:          leaseFormat,
+			LeasePath:            finalLeasePath,
+			LeaseFormat:          finalLeaseFormat,
 			PreserveDeletedHosts: preserveDeletedHosts,
-			Debug:                debug, // Added Debug field
-			DryRun:               dryRun,
+			Debug:                logLevel == "debug",
+			DryRun:               installDryRun,
 			LogLevel:             logLevel,
 			LogFile:              logFile,
 			MaxLogSize:           maxLogSize,
@@ -108,14 +192,9 @@ Use --dry-run to preview what would be written without making any changes.`,
 			NoCompress:           noCompress,
 		}
 
-		// Read template conten
-		templateContent, err := templates.ReadFile("templates/config.yaml")
-		if err != nil {
-			return fmt.Errorf("failed to read config template: %w", err)
-		}
-
-		// Parse and execute template
-		tmpl, err := template.New("config").Parse(string(templateContent))
+		// Read template content
+		// Parse and execute template from the embedded filesystem
+		tmpl, err := template.New("config.env").ParseFS(templates, "templates/config.env")
 		if err != nil {
 			return fmt.Errorf("failed to parse config template: %w", err)
 		}
@@ -128,7 +207,7 @@ Use --dry-run to preview what would be written without making any changes.`,
 		// Dry run: Print config info
 		if installDryRun {
 			fmt.Println("\n=== Configuration File (Dry Run) ===")
-			fmt.Printf("Would write to: %s\n", ConfigPath)
+			fmt.Printf("Would write to: %s\n", "/usr/local/etc/dhcpsync/config.env")
 			fmt.Printf("Would set permissions: 0600\n")
 			fmt.Println("Content would be:")
 			fmt.Println("---")
@@ -136,31 +215,31 @@ Use --dry-run to preview what would be written without making any changes.`,
 			fmt.Println("---")
 		} else {
 			// Create config directory and check for existing config
-			configDir := filepath.Dir(ConfigPath)
+			configDir := filepath.Dir("/usr/local/etc/dhcpsync/config.env")
 			if err := os.MkdirAll(configDir, 0755); err != nil {
 				return fmt.Errorf("failed to create config directory: %w", err)
 			}
 
 			// Check if config file already exists
 			configExists := false
-			if _, err := os.Stat(ConfigPath); err == nil {
+			if _, err := os.Stat("/usr/local/etc/dhcpsync/config.env"); err == nil {
 				configExists = true
-				fmt.Printf("\nExisting configuration found at %s\n", ConfigPath)
+				fmt.Printf("\nExisting configuration found at %s\n", "/usr/local/etc/dhcpsync/config.env")
 				fmt.Println("Preserving existing configuration")
 			} else if !os.IsNotExist(err) {
 				return fmt.Errorf("failed to check for existing config: %w", err)
 			}
 
-			// Only write config if it doesn't exis
+			// Only write config if it doesn't exist
 			if !configExists {
-				if err := os.WriteFile(ConfigPath, configBuffer.Bytes(), 0600); err != nil {
+				if err := os.WriteFile("/usr/local/etc/dhcpsync/config.env", configBuffer.Bytes(), 0600); err != nil {
 					return fmt.Errorf("failed to write config file: %w", err)
 				}
-				fmt.Printf("\nNew configuration written to %s\n", ConfigPath)
+				fmt.Printf("\nNew configuration written to %s\n", "/usr/local/etc/dhcpsync/config.env")
 			}
 		}
 
-		// Read and process RC scrip
+		// Read and process RC script from the embedded filesystem
 		rcContent, err := templates.ReadFile("templates/rc.script")
 		if err != nil {
 			return fmt.Errorf("failed to read rc.script template: %w", err)
@@ -169,24 +248,59 @@ Use --dry-run to preview what would be written without making any changes.`,
 		// Dry run: Print RC script info
 		if installDryRun {
 			fmt.Println("\n=== RC Script (Dry Run) ===")
-			fmt.Printf("Would write to: %s\n", RCPath)
+			fmt.Printf("Would write to: %s\n", "/usr/local/etc/rc.d/dhcpsync")
 			fmt.Printf("Would set permissions: 0755\n")
 			fmt.Println("Content would be:")
 			fmt.Println("---")
 			fmt.Println(string(rcContent))
 			fmt.Println("---")
 			fmt.Println("\nService Installation (Dry Run):")
-			fmt.Println("Would run: service dhcp-adguard-sync enable")
+			fmt.Println("Would run: service dhcpsync enable")
 		} else {
-			// Write RC scrip
-			if err := os.WriteFile(RCPath, rcContent, 0755); err != nil {
+			// Write RC script
+			if err := os.WriteFile("/usr/local/etc/rc.d/dhcpsync", rcContent, 0755); err != nil {
 				return fmt.Errorf("failed to create rc.d script: %w", err)
 			}
 
-
 			// Enable the service
-			if err := exec.Command("service", "dhcp-adguard-sync", "enable").Run(); err != nil {
-				return fmt.Errorf("failed to enable service: %w", err)
+			cmd := exec.Command("service", "dhcpsync", "enable")
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("failed to enable service: %w\nOutput: %s", err, string(output))
+			}
+		}
+
+		// Install syslog configuration from the embedded filesystem
+		syslogContent, err := templates.ReadFile("templates/syslog.conf")
+		if err != nil {
+			return fmt.Errorf("failed to read syslog.conf template: %w", err)
+		}
+
+		// Dry run: Print syslog config info
+		if installDryRun {
+			fmt.Println("\n=== Syslog Configuration (Dry Run) ===")
+			fmt.Printf("Would write to: %s\n", "/etc/syslog.d/dhcpsync.conf")
+			fmt.Printf("Would set permissions: 0644\n")
+			fmt.Println("Content would be:")
+			fmt.Println("---")
+			fmt.Println(string(syslogContent))
+			fmt.Println("---")
+			fmt.Println("Would restart syslogd service")
+		} else {
+			// Create syslog.d directory if it doesn't exist
+			if err := os.MkdirAll(filepath.Dir("/etc/syslog.d/dhcpsync.conf"), 0755); err != nil {
+				return fmt.Errorf("failed to create syslog.d directory: %w", err)
+			}
+
+			// Write syslog configuration
+			if err := os.WriteFile("/etc/syslog.d/dhcpsync.conf", syslogContent, 0644); err != nil {
+				return fmt.Errorf("failed to create syslog configuration: %w", err)
+			}
+
+			// Restart syslogd to pick up the new configuration
+			if err := exec.Command("service", "syslogd", "restart").Run(); err != nil {
+				fmt.Printf("Warning: failed to restart syslogd: %v\n", err)
+				fmt.Println("You may need to manually restart syslogd: service syslogd restart")
 			}
 		}
 		if installDryRun {
@@ -195,18 +309,26 @@ Use --dry-run to preview what would be written without making any changes.`,
 		} else {
 			fmt.Println("\nInstallation completed successfully!")
 			// Message about configuration was already printed earlier
-			fmt.Println("Start the service with: service dhcp-adguard-sync start")
+			fmt.Println("Start the service with: service dhcpsync start")
 		}
 		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(installCmd)
-
-	serveCmd.MarkFlagRequired("username")
-	serveCmd.MarkFlagRequired("password")
-
-	// Add dry-run flag
-	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Show what would be installed without making any changes")
+	installCmd.Flags().String("username", "", "AdGuard Home username")
+	installCmd.Flags().String("password", "", "AdGuard Home password")
+	installCmd.Flags().String("adguard-url", "127.0.0.1:3000", "AdGuard Home host:port")
+	installCmd.Flags().String("lease-path", "", "Path to DHCP leases file (will be auto-detected if empty)")
+	installCmd.Flags().String("lease-format", "", "DHCP lease file format (isc or dnsmasq, will be auto-detected if empty)")
+	installCmd.Flags().String("scheme", "http", "Connection scheme (http/https)")
+	installCmd.Flags().Int("timeout", 10, "API timeout in seconds")
+	installCmd.Flags().Bool("dry-run", false, "Show what would be installed without making any changes")
+	installCmd.Flags().Bool("preserve-deleted-hosts", false, "Preserve deleted hosts")
+	installCmd.Flags().String("log-level", "info", "Log level (debug, info, warn, error, fatal)")
+	installCmd.Flags().String("log-file", "/var/log/dhcpsync.log", "Log file path")
+	installCmd.Flags().Int("max-log-size", 100, "Maximum log file size in megabytes")
+	installCmd.Flags().Int("max-backups", 5, "Maximum number of log file backups")
+	installCmd.Flags().Int("max-age", 28, "Maximum age of log file backups in days")
+	installCmd.Flags().Bool("no-compress", false, "Do not compress log file backups")
 }

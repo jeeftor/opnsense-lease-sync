@@ -1,0 +1,40 @@
+<model>
+    <mount>//OPNsense/dhcpsync</mount>
+    <description>
+        the OPNsense "Dhcpsync" application
+    </description>
+    <items>
+        <!-- container -->
+        <general>
+            <!-- fields -->
+            <Enabled type="BooleanField">
+                <Default>1</Default>
+                <Required>Y</Required>
+                <Help>Enables the Dhcpsync service</Help>
+            </Enabled>
+            <AdguardHomeURL type="TextField">
+                <Default>http://localhost:3000</Default>
+                <Required>Y</Required>
+                <ValidationMessage>Please enter a valid URL (e.g., http://localhost:3000)</ValidationMessage>
+                <Help>URL to your Adguard Home instance - if running the OPNsense plugin this is probably http://localhost:3000</Help>
+            </AdguardHomeURL>
+            <AdguardHomeUsername type="TextField">
+                <Required>Y</Required>
+                <Help>Username for Adguard Home authentication</Help>
+            </AdguardHomeUsername>
+            <AdguardHomePassword type="TextField">
+                <Required>N</Required>
+                <Help>Password for Adguard Home authentication</Help>
+            </AdguardHomePassword>
+            <DHCPServer type="OptionField">
+                <Default>dnsmasq</Default>
+                <Required>Y</Required>
+                <OptionValues>
+                    <opt1 value="dnsmasq">DNSMasq</opt1>
+                    <opt2 value="isc">ISC DHCPv4</opt2>
+                </OptionValues>
+                <Help>Select the DHCP server type to sync with. This will inform the application where to find the lease file on disk so that it can read and update the current leases.</Help>
+            </DHCPServer>
+        </general>
+    </items>
+</model>

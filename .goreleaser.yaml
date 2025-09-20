@@ -1,6 +1,6 @@
 version: 2
 
-project_name: dhcp-adguard-sync
+project_name: dhcpsync
 
 before:
   hooks:
@@ -10,15 +10,17 @@ builds:
   - id: standard
     env:
       - CGO_ENABLED=0
-    goos: [freebsd, linux]
-    goarch: [amd64, arm64, arm]
-    goarm: ["6", "7"]
+#    goos: [freebsd, linux]
+    goos: [freebsd]
+    goarch: [amd64] # OPNSense nto supported elsewhere i think
+#    goarch: [amd64, arm64, arm]
+#    goarm: ["6", "7"]
     flags: ["-trimpath"]
     ldflags:
       - -s -w
-      - -X opnsense-lease-sync/cmd.version={{.Version}}
-      - -X opnsense-lease-sync/cmd.commit={{.Commit}}
-      - -X opnsense-lease-sync/cmd.date={{.Date}}
+      - -X dhcpsync/cmd.version={{.Version}}
+      - -X dhcpsync/cmd.commit={{.Commit}}
+      - -X dhcpsync/cmd.date={{.Date}}
 
 archives:
   - id: standard

@@ -1,6 +1,8 @@
 package main
 
-import "opnsense-lease-sync/cmd"
+import (
+	"dhcpsync/cmd"
+)
 
 func main() {
 	cmd.Execute()

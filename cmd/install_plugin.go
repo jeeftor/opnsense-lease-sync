@@ -1,32 +1,36 @@
 package cmd
 
 import (
-	"fmt"
+	"dhcpsync/pkg/plugin"
+
 	"github.com/spf13/cobra"
 )
 
+var (
+	prefixFlag string
+	forceFlag  bool
+)
+
 var installPluginCmd = &cobra.Command{
-	Use:   "install-plugin",
-	Short: "Install the OPNsense web UI plugin (stub for future implementation)",
+	Use:          "install-plugin",
+	Short:        "Install the OPNsense web UI plugin",
+	SilenceUsage: true,
 	Long: `Install the OPNsense web UI plugin.
 
-This command is currently a stub for future implementation.
+This command copies plugin files from the opnsense-plugin directory to the
+appropriate locations in the OPNsense installation.
 
-For now, install the plugin manually using:
-1. Sync plugin files with dev-sync.sh (for development)
-2. Or follow the manual installation instructions in the README`,
+Use --prefix to specify a custom installation directory (e.g., --prefix=/tmp for testing).
+Use --force to overwrite existing files without prompting.
+
+The plugin files are embedded in the binary and will be extracted to the
+appropriate OPNsense directories during installation.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Plugin installation is not yet implemented.")
-		fmt.Println("")
-		fmt.Println("For development, use the dev-sync.sh script to sync plugin files.")
-		fmt.Println("For production, follow the manual plugin installation instructions in the README.")
-		fmt.Println("")
-		fmt.Println("Plugin installation via this command will be implemented in a future version.")
-
-		return nil
+		return plugin.InstallPlugin(prefixFlag, forceFlag)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(installPluginCmd)
+	installPluginCmd.Flags().StringVar(&prefixFlag, "prefix", "", "Custom installation prefix directory (default: /usr/local)")
+	installPluginCmd.Flags().BoolVar(&forceFlag, "force", false, "Overwrite existing files without prompting")
 }

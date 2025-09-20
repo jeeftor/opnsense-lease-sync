@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Go-based service that synchronizes DHCP leases from OPNsense to AdGuard Home. The project has two main components:
 
-1. **Main Application** (`dhcp-adguard-sync`): A Go service that handles DHCP lease synchronization
-2. **OPNsense Plugin**: A PHP-based web UI plugin that integrates with OPNsense for configuration and management
+1. **Main Application** (`opnsense-lease-sync`): A Go service that handles DHCP lease synchronization
+2. **Embedded OPNsense Plugin**: A PHP-based web UI plugin that integrates with OPNsense, now embedded within the Go binary for unified installation
 
 ## Development Commands
 
@@ -20,7 +20,7 @@ make build
 make release
 
 # Local development build
-go build -o build/dhcp-adguard-sync .
+go build -o build/opnsense-lease-sync .
 ```
 
 ### Code Quality
@@ -52,22 +52,18 @@ go mod download
 
 ### VM Development
 ```bash
-# Deploy to local OPNsense VM for testing
+# Deploy to local OPNsense VM for testing (via Makefile)
+make dev-sync
+
+# Force deploy (ignores errors, starts services)
+make dev-sync-force
+
+# Alternative: Use dev.sh script if available (not in repo)
 ./dev.sh deploy
-
-# Deploy only the Go binary
 ./dev.sh binary
-
-# Deploy only the PHP plugin
 ./dev.sh plugin
-
-# Watch for changes and auto-deploy
 ./dev.sh watch
-
-# SSH into the OPNsense VM
 ./dev.sh ssh
-
-# Test current deployment
 ./dev.sh test
 ```
 
@@ -81,6 +77,10 @@ go mod download
   - `sync_cmd.go`: One-time sync command
   - `serve_cmd.go`: Service/daemon mode
   - `install.go`/`uninstall.go`: Installation management
+  - `install_plugin.go`/`uninstall_plugin.go`: Plugin installation management
+  - `plugin.go`: Plugin-related commands
+  - `embed.go`: Embedded file handling
+  - `paths.go`: Path management utilities
   - `version.go`: Version information
 - **pkg/**: Core business logic packages
   - `sync.go`: Main synchronization service orchestrator
@@ -90,6 +90,9 @@ go mod download
   - `types.go`: Common data structures and constants
   - `appConfig.go`: Configuration management
   - `logger.go`: Logging setup and configuration
+  - `plugin/`: Embedded OPNsense plugin functionality
+    - `plugin.go`: Plugin installation and management logic
+    - `opnsense-plugin/`: PHP plugin files embedded in the binary
 
 ### OPNsense Plugin Structure
 
@@ -136,11 +139,11 @@ Key environment variables that can be used instead of command-line flags:
 - `DRY_RUN`, `DEBUG`: Development/testing flags
 
 ### Configuration File
-Service mode uses `/usr/local/etc/dhcp-adguard-sync/config.yaml` for persistent configuration.
+Service mode uses `/usr/local/etc/dhcpsync/config.env` for persistent configuration.
 
 ## FreeBSD/OPNsense Specifics
 
-- Designed to run as a FreeBSD service (`/usr/local/etc/rc.d/dhcp-adguard-sync`)
+- Designed to run as a FreeBSD service (`/usr/local/etc/rc.d/dhcpsync`)
 - Plugin integrates with OPNsense's MVC framework
 - Supports both IPv4 (DHCP leases) and IPv6 (NDP table monitoring)
 - Uses standard OPNsense paths and conventions

@@ -3,13 +3,13 @@ package cmd
 
 import (
 	"context"
+	"dhcpsync/pkg"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"opnsense-lease-sync/pkg"
 )
 
 // serveCmd represents the serve command
@@ -20,10 +20,22 @@ var serveCmd = &cobra.Command{
 and automatically syncs them to AdGuard Home. This is the recommended
 mode for production use.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Create log configuration
+		// Get flags specific to this command
+		username, _ := cmd.Flags().GetString("username")
+		password, _ := cmd.Flags().GetString("password")
+		adguardURL, _ := cmd.Flags().GetString("adguard-url")
+		leasePath, _ := cmd.Flags().GetString("lease-path")
+		leaseFormat, _ := cmd.Flags().GetString("lease-format")
+		scheme, _ := cmd.Flags().GetString("scheme")
+		timeout, _ := cmd.Flags().GetInt("timeout")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		preserveDeletedHosts, _ := cmd.Flags().GetBool("preserve-deleted-hosts")
+
+		// Create log configuration from global flags
 		logConfig := pkg.LogConfig{
 			Level:      pkg.ParseLogLevel(logLevel),
 			FilePath:   logFile,
+			SyslogOnly: syslogOnly,
 			MaxSize:    maxLogSize,
 			MaxBackups: maxBackups,
 			MaxAge:     maxAge,
@@ -34,6 +46,23 @@ mode for production use.`,
 		logger, err := pkg.NewLogger(logConfig)
 		if err != nil {
 			return fmt.Errorf("failed to initialize logger: %w", err)
+		}
+
+		// Print debug info if log level is debug
+		if logLevel == "debug" {
+			logger.Info("=== Configuration Debug Info ===")
+			logger.Info(fmt.Sprintf("AdGuard URL: %s", adguardURL))
+			logger.Info(fmt.Sprintf("AdGuard Scheme: %s", scheme))
+			logger.Info(fmt.Sprintf("AdGuard Username: %s", username))
+			logger.Info(fmt.Sprintf("AdGuard Password: %s", "[REDACTED]"))
+			logger.Info(fmt.Sprintf("AdGuard Timeout: %d", timeout))
+			logger.Info(fmt.Sprintf("DHCP Lease Path: %s", leasePath))
+			logger.Info(fmt.Sprintf("DHCP Lease Format: %s", leaseFormat))
+			logger.Info(fmt.Sprintf("Dry Run: %t", dryRun))
+			logger.Info(fmt.Sprintf("Preserve Deleted Hosts: %t", preserveDeletedHosts))
+			logger.Info(fmt.Sprintf("Log Level: %s", logLevel))
+			logger.Info(fmt.Sprintf("Log File: %s", logFile))
+			logger.Info("===============================")
 		}
 
 		// Create a context that we'll cancel on shutdown
@@ -66,7 +95,7 @@ mode for production use.`,
 			Timeout:              timeout,
 			Logger:               logger,
 			PreserveDeletedHosts: preserveDeletedHosts,
-			Debug:                debug,
+			Debug:                logLevel == "debug",
 			LogConfig:            logConfig,
 		})
 		if err != nil {
@@ -110,8 +139,18 @@ mode for production use.`,
 }
 
 func init() {
+	// Add flags specific to the serve command
+	serveCmd.Flags().String("username", "", "AdGuard Home username")
+	serveCmd.Flags().String("password", "", "AdGuard Home password")
+	serveCmd.Flags().String("adguard-url", "127.0.0.1:3000", "AdGuard Home host:port")
+	serveCmd.Flags().String("lease-path", "/var/db/dnsmasq.leases", "Path to DHCP leases file")
+	serveCmd.Flags().String("lease-format", "dnsmasq", "DHCP lease file format (isc or dnsmasq)")
+	serveCmd.Flags().String("scheme", "http", "Connection scheme (http/https)")
+	serveCmd.Flags().Int("timeout", 10, "API timeout in seconds")
+	serveCmd.Flags().Bool("dry-run", false, "Dry run mode")
+	serveCmd.Flags().Bool("preserve-deleted-hosts", false, "Preserve deleted hosts")
+
+	// Mark required flags
 	serveCmd.MarkFlagRequired("username")
 	serveCmd.MarkFlagRequired("password")
-
-	rootCmd.AddCommand(serveCmd)
 }

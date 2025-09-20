@@ -4,8 +4,8 @@ package cmd
 import (
 	"fmt"
 
+	"dhcpsync/pkg"
 	"github.com/spf13/cobra"
-	"opnsense-lease-sync/pkg"
 )
 
 // syncCmd represents the sync command
@@ -15,10 +15,22 @@ var syncCmd = &cobra.Command{
 	Long: `Performs a single synchronization of DHCP leases to AdGuard Home
 and then exits. This is useful for testing or manual synchronization.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Create log configuration
+		// Get flags specific to this command
+		username, _ := cmd.Flags().GetString("username")
+		password, _ := cmd.Flags().GetString("password")
+		adguardURL, _ := cmd.Flags().GetString("adguard-url")
+		leasePath, _ := cmd.Flags().GetString("lease-path")
+		leaseFormat, _ := cmd.Flags().GetString("lease-format")
+		scheme, _ := cmd.Flags().GetString("scheme")
+		timeout, _ := cmd.Flags().GetInt("timeout")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		preserveDeletedHosts, _ := cmd.Flags().GetBool("preserve-deleted-hosts")
+
+		// Create log configuration from global flags
 		logConfig := pkg.LogConfig{
 			Level:      pkg.ParseLogLevel(logLevel),
 			FilePath:   logFile,
+			SyslogOnly: syslogOnly,
 			MaxSize:    maxLogSize,
 			MaxBackups: maxBackups,
 			MaxAge:     maxAge,
@@ -40,17 +52,18 @@ and then exits. This is useful for testing or manual synchronization.`,
 		}
 
 		syncService, err := pkg.NewSyncService(pkg.Config{
-			AdGuardURL:  adguardURL,
-			LeasePath:   leasePath,
-			LeaseFormat: leaseFormatType,
-			DryRun:      dryRun,
-			Username:    username,
-			Password:    password,
-			Scheme:      scheme,
-			Timeout:     timeout,
-			Logger:      logger,
-			Debug:       debug,
-			LogConfig:   logConfig,
+			AdGuardURL:           adguardURL,
+			LeasePath:            leasePath,
+			LeaseFormat:          leaseFormatType,
+			DryRun:               dryRun,
+			Username:             username,
+			Password:             password,
+			Scheme:               scheme,
+			Timeout:              timeout,
+			Logger:               logger,
+			PreserveDeletedHosts: preserveDeletedHosts,
+			Debug:                logLevel == "debug",
+			LogConfig:            logConfig,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create service: %w", err)
@@ -66,8 +79,18 @@ and then exits. This is useful for testing or manual synchronization.`,
 }
 
 func init() {
-	serveCmd.MarkFlagRequired("username")
-	serveCmd.MarkFlagRequired("password")
+	// Add flags specific to the sync command
+	syncCmd.Flags().String("username", "", "AdGuard Home username")
+	syncCmd.Flags().String("password", "", "AdGuard Home password")
+	syncCmd.Flags().String("adguard-url", "127.0.0.1:3000", "AdGuard Home host:port")
+	syncCmd.Flags().String("lease-path", "/var/db/dnsmasq.leases", "Path to DHCP leases file")
+	syncCmd.Flags().String("lease-format", "dnsmasq", "DHCP lease file format (isc or dnsmasq)")
+	syncCmd.Flags().String("scheme", "http", "Connection scheme (http/https)")
+	syncCmd.Flags().Int("timeout", 10, "API timeout in seconds")
+	syncCmd.Flags().Bool("dry-run", false, "Dry run mode")
+	syncCmd.Flags().Bool("preserve-deleted-hosts", false, "Preserve deleted hosts")
 
-	rootCmd.AddCommand(syncCmd)
+	// Mark required flags
+	syncCmd.MarkFlagRequired("username")
+	syncCmd.MarkFlagRequired("password")
 }

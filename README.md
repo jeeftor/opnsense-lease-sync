@@ -1,8 +1,8 @@
 # DHCP AdGuard Sync for OPNsense
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/jeeftor/opnsense-lease-sync)](https://golang.org/)
-[![Release](https://img.shields.io/github/v/release/jeeftor/opnsense-lease-sync)](https://github.com/jeeftor/opnsense-lease-sync/releases)
-[![License](https://img.shields.io/github/license/jeeftor/opnsense-lease-sync)](LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/jeeftor/dhcpsync)](https://golang.org/)
+[![Release](https://img.shields.io/github/v/release/jeeftor/dhcpsync)](https://github.com/jeeftor/dhcpsync/releases)
+[![License](https://img.shields.io/github/license/jeeftor/dhcpsync)](LICENSE)
 
 > **Automatically sync DHCP clients from OPNsense to AdGuard Home for seamless DNS filtering**
 
@@ -19,7 +19,7 @@ Ever notice that devices on your network don't show up by name in AdGuard Home? 
 
 **One-line installation:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/jeeftor/dhcpsync/master/install.sh | sh
 ```
 
 **Then configure via OPNsense Web UI:**
@@ -34,7 +34,7 @@ curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/i
 
 This project consists of two main components:
 
-1. **Main Application** (`dhcp-adguard-sync`): A Go-based service that handles the actual synchronization
+1. **Main Application** (`dhcpsync`): A Go-based service that handles the actual synchronization
 2. **OPNsense Plugin**: A web UI plugin that integrates with OPNsense for easy configuration and management
 
 The plugin provides a user-friendly interface within OPNsense while the main application handles the core functionality.
@@ -68,7 +68,7 @@ The plugin provides a user-friendly interface within OPNsense while the main app
 Install both components with a single command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/jeeftor/opnsense-lease-sync/master/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/jeeftor/dhcpsync/master/install.sh | sh
 ```
 
 This script will:
@@ -81,30 +81,30 @@ This script will:
 
 #### Step 1: Install Main Application
 
-1. **Download the binary** from the [releases page](https://github.com/jeeftor/opnsense-lease-sync/releases):
+1. **Download the binary** from the [releases page](https://github.com/jeeftor/dhcpsync/releases):
    ```bash
    # Example for FreeBSD amd64
-   curl -L -o dhcp-adguard-sync.tar.gz \
-     "https://github.com/jeeftor/opnsense-lease-sync/releases/download/v0.0.26/dhcp-adguard-sync_freebsd_amd64_v0.0.26.tar.gz"
-   tar -xzf dhcp-adguard-sync.tar.gz
+   curl -L -o dhcpsync.tar.gz \
+     "https://github.com/jeeftor/dhcpsync/releases/download/v0.0.26/dhcpsync_freebsd_amd64_v0.0.26.tar.gz"
+   tar -xzf dhcpsync.tar.gz
    ```
 
 2. **Install on your OPNsense system**:
    ```bash
    # Copy binary to OPNsense
-   scp dhcp-adguard-sync root@opnsense:/root/
+   scp dhcpsync root@opnsense:/root/
 
    # SSH and install
    ssh root@opnsense
    cd /root
-   chmod +x dhcp-adguard-sync
-   ./dhcp-adguard-sync install --username "your-adguard-username" --password "your-adguard-password"
+   chmod +x dhcpsync
+   ./dhcpsync install --username "your-adguard-username" --password "your-adguard-password"
    ```
 
 3. **Start and enable the service**:
    ```bash
-   service dhcp-adguard-sync start
-   service dhcp-adguard-sync enable
+   service dhcpsync start
+   service dhcpsync enable
    ```
 
 #### Step 2: Install OPNsense Plugin (Optional)
@@ -113,13 +113,13 @@ The plugin provides a web UI for easy configuration and management.
 
 1. **Download the plugin package**:
    ```bash
-   curl -L -o os-dhcpadguardsync-plugin.tar.gz \
-     "https://github.com/jeeftor/opnsense-lease-sync/releases/download/v0.0.26/os-dhcpadguardsync-plugin.tar.gz"
+   curl -L -o os-dhcpsync-plugin.tar.gz \
+     "https://github.com/jeeftor/dhcpsync/releases/download/v0.0.26/os-dhcpsync-plugin.tar.gz"
    ```
 
 2. **Extract and install the plugin**:
    ```bash
-   tar -xzf os-dhcpadguardsync-plugin.tar.gz
+   tar -xzf os-dhcpsync-plugin.tar.gz
    cd opnsense-plugin/src
    cp -r opnsense/* /usr/local/opnsense/
    ```
@@ -137,12 +137,12 @@ The plugin provides a web UI for easy configuration and management.
 After installation, you can configure the service:
 
 - **Via OPNsense Web UI** (if plugin installed): Navigate to Services > DHCP AdGuard Sync
-- **Via command line**: Edit `/usr/local/etc/dhcp-adguard-sync/config.yaml`
-- **Via CLI commands**: Use `dhcp-adguard-sync --help` for options
+- **Via command line**: Edit `/usr/local/etc/dhcpsync/config.env`
+- **Via CLI commands**: Use `dhcpsync --help` for options
 
 ## Configuration
 
-The configuration file is located at `/usr/local/etc/dhcp-adguard-sync/config.yaml`.
+The configuration file is located at `/usr/local/etc/dhcpsync/config.env`.
 
 ### Lease Format Selection
 
@@ -196,7 +196,7 @@ ADGUARD_TIMEOUT="10"
 
 # Logging configuration
 LOG_LEVEL="info"
-LOG_FILE="/var/log/dhcp-adguard-sync.log"
+LOG_FILE="/var/log/dhcpsync.log"
 ```
 
 ## Usage
@@ -205,17 +205,17 @@ LOG_FILE="/var/log/dhcp-adguard-sync.log"
 
 Start the service:
 ```bash
-service dhcp-adguard-sync start
+service dhcpsync start
 ```
 
 Stop the service:
 ```bash
-service dhcp-adguard-sync stop
+service dhcpsync stop
 ```
 
 Check status:
 ```bash
-service dhcp-adguard-sync status
+service dhcpsync status
 ```
 
 ### View Logs
@@ -223,27 +223,27 @@ service dhcp-adguard-sync status
 Via OPNsense UI:
 1. Navigate to System > Log Files
 2. Select "General" tab
-3. Look for entries from "dhcp-adguard-sync"
+3. Look for entries from "dhcpsync"
 
 Via command line:
 ```bash
 # View service log file
-tail -f /var/log/dhcp-adguard-sync.log
+tail -f /var/log/dhcpsync.log
 
 # View system log entries
-grep dhcp-adguard-sync /var/log/messages
+grep dhcpsync /var/log/messages
 ```
 
 ### Manual Sync
 
 To perform a one-time sync with ISC DHCP lease format (default):
 ```bash
-dhcp-adguard-sync sync --username "your-username" --password "your-password" --lease-path "/var/dhcpd/var/db/dhcpd.leases"
+dhcpsync sync --username "your-username" --password "your-password" --lease-path "/var/dhcpd/var/db/dhcpd.leases"
 ```
 
 To perform a one-time sync with DNSMasq lease format:
 ```bash
-dhcp-adguard-sync sync --username "your-username" --password "your-password" --lease-path "/var/db/dnsmasq.leases" --lease-format "dnsmasq"
+dhcpsync sync --username "your-username" --password "your-password" --lease-path "/var/db/dnsmasq.leases" --lease-format "dnsmasq"
 ```
 
 The application will read the lease file using the specified format and synchronize all clients to AdGuard Home.
@@ -252,8 +252,8 @@ The application will read the lease file using the specified format and synchron
 
 For a complete list of available options:
 ```bash
-dhcp-adguard-sync --help
-dhcp-adguard-sync sync --help
+dhcpsync --help
+dhcpsync sync --help
 ```
 
 This will show all available options, including `--lease-path` for the lease file path and `--lease-format` to select between "isc" and "dnsmasq" formats.
@@ -262,20 +262,20 @@ This will show all available options, including `--lease-path` for the lease fil
 
 1. Stop and disable the service:
 ```bash
-service dhcp-adguard-sync stop
-service dhcp-adguard-sync disable
+service dhcpsync stop
+service dhcpsync disable
 ```
 
 2. Run the uninstall command:
 ```bash
 # Keep configuration files
-dhcp-adguard-sync uninstall
+dhcpsync uninstall
 
 # Remove configuration files as well
-dhcp-adguard-sync uninstall --remove-config
+dhcpsync uninstall --remove-config
 
 # Force uninstallation if experiencing issues
-dhcp-adguard-sync uninstall --force
+dhcpsync uninstall --force
 ```
 
 ## 🔧 Troubleshooting
@@ -284,13 +284,13 @@ dhcp-adguard-sync uninstall --force
 
 ```bash
 # Check if service is running
-service dhcp-adguard-sync status
+service dhcpsync status
 
 # Test configuration
-dhcp-adguard-sync sync --dry-run
+dhcpsync sync --dry-run
 
 # View recent logs
-tail -50 /var/log/dhcp-adguard-sync.log
+tail -50 /var/log/dhcpsync.log
 ```
 
 ### Common Issues & Solutions
@@ -300,9 +300,9 @@ tail -50 /var/log/dhcp-adguard-sync.log
 
 **Symptoms**: Service fails to start or immediately stops
 **Solutions**:
-1. Check configuration file exists: `ls -la /usr/local/etc/dhcp-adguard-sync/config.yaml`
-2. Verify binary permissions: `ls -la /usr/local/bin/dhcp-adguard-sync`
-3. Check logs: `grep dhcp-adguard-sync /var/log/messages`
+1. Check configuration file exists: `ls -la /usr/local/etc/dhcpsync/config.env`
+2. Verify binary permissions: `ls -la /usr/local/bin/dhcpsync`
+3. Check logs: `grep dhcpsync /var/log/messages`
 </details>
 
 <details>
@@ -313,7 +313,7 @@ tail -50 /var/log/dhcp-adguard-sync.log
 1. Verify AdGuard credentials work: Test login at AdGuard Home web interface
 2. Check DHCP lease file: `ls -la /var/db/dnsmasq.leases` (or `/var/dhcpd/var/db/dhcpd.leases` for ISC)
 3. Confirm lease format matches your DHCP server
-4. Run test sync: `dhcp-adguard-sync sync --dry-run`
+4. Run test sync: `dhcpsync sync --dry-run`
 </details>
 
 <details>
@@ -348,8 +348,8 @@ For detailed troubleshooting, enable debug logging:
 If issues persist:
 1. Enable debug logging
 2. Reproduce the issue
-3. Collect logs: `tail -100 /var/log/dhcp-adguard-sync.log`
-4. [Open an issue](https://github.com/jeeftor/opnsense-lease-sync/issues) with logs and configuration details
+3. Collect logs: `tail -100 /var/log/dhcpsync.log`
+4. [Open an issue](https://github.com/jeeftor/dhcpsync/issues) with logs and configuration details
 
 ## Contributing
 

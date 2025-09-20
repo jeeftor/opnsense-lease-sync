@@ -23,6 +23,7 @@ func InstallPlugin(prefix string, force bool) error {
 		"opnsense-plugin/mvc/app/models/OPNsense/Dhcpsync":      filepath.Join(prefix, "opnsense/mvc/app/models/OPNsense/Dhcpsync"),
 		"opnsense-plugin/mvc/app/controllers/OPNsense/Dhcpsync": filepath.Join(prefix, "opnsense/mvc/app/controllers/OPNsense/Dhcpsync"),
 		"opnsense-plugin/service/templates/OPNsense/Dhcpsync":   filepath.Join(prefix, "opnsense/service/templates/OPNsense/Dhcpsync"),
+		"opnsense-plugin/scripts/systemhealth/logformats":      filepath.Join(prefix, "opnsense/scripts/systemhealth/logformats"),
 		"opnsense-plugin/service/conf":                          filepath.Join(prefix, "opnsense/service/conf"),
 	}
 

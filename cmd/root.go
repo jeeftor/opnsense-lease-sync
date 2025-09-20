@@ -13,6 +13,7 @@ var (
 	logLevel   string
 	logFile    string
 	syslogOnly bool
+	bsdFormat  bool
 	maxLogSize int
 	maxBackups int
 	maxAge     int
@@ -52,6 +53,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Log level (error, warn, info, debug)")
 	rootCmd.PersistentFlags().StringVar(&logFile, "log-file", "", "Log file path (default: stdout+syslog)")
 	rootCmd.PersistentFlags().BoolVar(&syslogOnly, "syslog-only", false, "Log to syslog only")
+	rootCmd.PersistentFlags().BoolVar(&bsdFormat, "bsd", false, "Use BSD syslog format for file logging")
 	rootCmd.PersistentFlags().IntVar(&maxLogSize, "max-log-size", 10, "Max log file size (MB)")
 	rootCmd.PersistentFlags().IntVar(&maxBackups, "max-backups", 3, "Max backup log files")
 	rootCmd.PersistentFlags().IntVar(&maxAge, "max-age", 28, "Max age of log files (days)")

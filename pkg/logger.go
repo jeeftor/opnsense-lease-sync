@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -66,6 +67,7 @@ type LogConfig struct {
 	FilePath       string
 	SyslogFacility string
 	SyslogOnly     bool
+	BSDFormat      bool
 	MaxSize        int
 	MaxBackups     int
 	MaxAge         int
@@ -77,25 +79,40 @@ type DualLogger struct {
 	sysLogger  *syslog.Writer
 	level      LogLevel
 	rotator    *lumberjack.Logger
+	bsdFormat  bool
+	hostname   string
 }
 
 func NewLogger(cfg LogConfig) (Logger, error) {
 	var dl DualLogger
 	dl.level = cfg.Level
+	dl.bsdFormat = cfg.BSDFormat
 
-	// Default to local3 facility if not specified
-	facility := cfg.SyslogFacility
-	if facility == "" {
-		facility = "local3"
+	// Get hostname for BSD format
+	if dl.bsdFormat {
+		hostname, err := os.Hostname()
+		if err != nil {
+			hostname = "localhost"
+		}
+		dl.hostname = hostname
 	}
 
-	// Setup syslog first
-	priority := syslog.LOG_INFO | getFacility(facility)
-	sysLogger, err := syslog.New(priority, "dhcpsync")
-	if err != nil {
-		return nil, fmt.Errorf("initializing syslog: %w", err)
+	// Setup syslog (skip if BSD format file logging only)
+	if !dl.bsdFormat || cfg.SyslogOnly {
+		// Default to local3 facility if not specified
+		facility := cfg.SyslogFacility
+		if facility == "" {
+			facility = "local3"
+		}
+
+		// Setup syslog
+		priority := syslog.LOG_INFO | getFacility(facility)
+		sysLogger, err := syslog.New(priority, "dhcpsync")
+		if err != nil {
+			return nil, fmt.Errorf("initializing syslog: %w", err)
+		}
+		dl.sysLogger = sysLogger
 	}
-	dl.sysLogger = sysLogger
 
 	// Setup file/stdout logging based on configuration
 	if cfg.SyslogOnly {
@@ -117,8 +134,14 @@ func NewLogger(cfg LogConfig) (Logger, error) {
 			Compress:   cfg.Compress,
 		}
 
-		// Create file logger
-		dl.fileLogger = log.New(dl.rotator, "", log.LstdFlags)
+		// Create file logger with appropriate format
+		if dl.bsdFormat {
+			// BSD format: no timestamps since we'll add them manually
+			dl.fileLogger = log.New(dl.rotator, "", 0)
+		} else {
+			// Standard format with timestamps
+			dl.fileLogger = log.New(dl.rotator, "", log.LstdFlags)
+		}
 	} else {
 		// Default mode: stdout + syslog (dual logging)
 		dl.fileLogger = log.New(os.Stdout, "", log.LstdFlags)
@@ -131,7 +154,33 @@ func (l *DualLogger) log(level LogLevel, msg string) {
 	if l.level >= level {
 		// Log to file/stdout if we have a file logger (unless syslog-only mode)
 		if l.fileLogger != nil {
-			l.fileLogger.Output(2, fmt.Sprintf("[%s] %s", level, msg))
+			if l.bsdFormat {
+				// BSD syslog format: <priority>MMM DD HH:MM:SS hostname process[pid]: message
+				// Priority = facility * 8 + severity
+				// Using daemon (3) facility: 3 * 8 = 24
+				// Severity: 0=emergency, 1=alert, 2=critical, 3=error, 4=warning, 5=notice, 6=info, 7=debug
+				var priority int
+				switch level {
+				case LogLevelError:
+					priority = 24 + 3 // daemon.err (27)
+				case LogLevelWarn:
+					priority = 24 + 4 // daemon.warning (28)
+				case LogLevelInfo:
+					priority = 24 + 6 // daemon.info (30)
+				case LogLevelDebug:
+					priority = 24 + 7 // daemon.debug (31)
+				default:
+					priority = 24 + 6 // daemon.info (30)
+				}
+
+				timestamp := time.Now().Format("Jan 02 15:04:05")
+				pid := os.Getpid()
+				bsdMsg := fmt.Sprintf("<%d>%s %s dhcpsync[%d]: %s", priority, timestamp, l.hostname, pid, msg)
+				l.fileLogger.Output(2, bsdMsg)
+			} else {
+				// Standard format with log level
+				l.fileLogger.Output(2, fmt.Sprintf("[%s] %s", level, msg))
+			}
 		}
 
 		// Always log to syslog with appropriate level

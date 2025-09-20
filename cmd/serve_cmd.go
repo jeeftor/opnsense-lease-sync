@@ -31,10 +31,18 @@ mode for production use.`,
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		preserveDeletedHosts, _ := cmd.Flags().GetBool("preserve-deleted-hosts")
 
+		// Determine log file path - check environment variable if flag not set
+		logFilePath := logFile
+		if logFilePath == "" {
+			if envLogFile := os.Getenv("LOG_FILE"); envLogFile != "" {
+				logFilePath = envLogFile
+			}
+		}
+
 		// Create log configuration from global flags
 		logConfig := pkg.LogConfig{
 			Level:      pkg.ParseLogLevel(logLevel),
-			FilePath:   logFile,
+			FilePath:   logFilePath,
 			SyslogOnly: syslogOnly,
 			MaxSize:    maxLogSize,
 			MaxBackups: maxBackups,
@@ -61,7 +69,7 @@ mode for production use.`,
 			logger.Info(fmt.Sprintf("Dry Run: %t", dryRun))
 			logger.Info(fmt.Sprintf("Preserve Deleted Hosts: %t", preserveDeletedHosts))
 			logger.Info(fmt.Sprintf("Log Level: %s", logLevel))
-			logger.Info(fmt.Sprintf("Log File: %s", logFile))
+			logger.Info(fmt.Sprintf("Log File: %s", logFilePath))
 			logger.Info("===============================")
 		}
 

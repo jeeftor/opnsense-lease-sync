@@ -20,15 +20,16 @@ load_rc_config $name
 : ${dhcpsync_user:="root"}
 
 pidfile="/var/run/${name}.pid"
-command="/usr/sbin/daemon"
-command_args="-P ${pidfile} -r -f -u ${dhcpsync_user} ${dhcpsync_command} serve --syslog-only"
 
-# Source the config file to get environment variables.
-# This block runs every time the script is called.
+# Source the config file to get environment variables first
 if [ -f "${dhcpsync_config}" ]; then
     set -a  # Mark all variables for export
     . "${dhcpsync_config}"
     set +a
 fi
+
+# Use env to ensure environment variables are passed to daemon
+command="/usr/bin/env"
+command_args="LOG_FILE=${LOG_FILE:-/var/log/dhcpsync.log} LOG_LEVEL=${LOG_LEVEL:-info} ADGUARD_USERNAME=${ADGUARD_USERNAME} ADGUARD_PASSWORD=${ADGUARD_PASSWORD} ADGUARD_URL=${ADGUARD_URL} ADGUARD_SCHEME=${ADGUARD_SCHEME:-http} LEASE_FORMAT=${LEASE_FORMAT:-dnsmasq} DHCP_LEASE_PATH=${DHCP_LEASE_PATH} /usr/sbin/daemon -P ${pidfile} -r -f -u ${dhcpsync_user} ${dhcpsync_command} serve"
 
 run_rc_command "$1"

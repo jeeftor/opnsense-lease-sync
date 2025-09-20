@@ -2,10 +2,10 @@
 package cmd
 
 import (
-	"fmt"
-
 	"dhcpsync/pkg"
+	"fmt"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // syncCmd represents the sync command
@@ -26,10 +26,18 @@ and then exits. This is useful for testing or manual synchronization.`,
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		preserveDeletedHosts, _ := cmd.Flags().GetBool("preserve-deleted-hosts")
 
+		// Determine log file path - check environment variable if flag not set
+		logFilePath := logFile
+		if logFilePath == "" {
+			if envLogFile := os.Getenv("LOG_FILE"); envLogFile != "" {
+				logFilePath = envLogFile
+			}
+		}
+
 		// Create log configuration from global flags
 		logConfig := pkg.LogConfig{
 			Level:      pkg.ParseLogLevel(logLevel),
-			FilePath:   logFile,
+			FilePath:   logFilePath,
 			SyslogOnly: syslogOnly,
 			MaxSize:    maxLogSize,
 			MaxBackups: maxBackups,

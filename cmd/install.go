@@ -87,7 +87,7 @@ This will:
 1. Copy the binary to /usr/local/bin
 2. Create a config file in /usr/local/etc/dhcpsync with provided credentials
 3. Install the rc.d service script
-4. Install syslog configuration for proper log management
+4. Create log directory for dhcpsync.log
 5. Set appropriate permissions
 
 Use --dry-run to preview what would be written without making any changes.`,
@@ -270,38 +270,19 @@ Use --dry-run to preview what would be written without making any changes.`,
 			}
 		}
 
-		// Install syslog configuration from the embedded filesystem
-		syslogContent, err := templates.ReadFile("templates/syslog.conf")
-		if err != nil {
-			return fmt.Errorf("failed to read syslog.conf template: %w", err)
-		}
-
-		// Dry run: Print syslog config info
+		// Create log directory for direct file logging
+		logDir := "/var/log"
 		if installDryRun {
-			fmt.Println("\n=== Syslog Configuration (Dry Run) ===")
-			fmt.Printf("Would write to: %s\n", "/etc/syslog.d/dhcpsync.conf")
-			fmt.Printf("Would set permissions: 0644\n")
-			fmt.Println("Content would be:")
-			fmt.Println("---")
-			fmt.Println(string(syslogContent))
-			fmt.Println("---")
-			fmt.Println("Would restart syslogd service")
+			fmt.Println("\n=== Log Directory Setup (Dry Run) ===")
+			fmt.Printf("Would ensure directory exists: %s\n", logDir)
+			fmt.Printf("Log file will be: %s\n", "/var/log/dhcpsync.log")
+			fmt.Println("Logs will be written directly to file (no syslog configuration needed)")
 		} else {
-			// Create syslog.d directory if it doesn't exist
-			if err := os.MkdirAll(filepath.Dir("/etc/syslog.d/dhcpsync.conf"), 0755); err != nil {
-				return fmt.Errorf("failed to create syslog.d directory: %w", err)
+			// Ensure log directory exists (should already exist on FreeBSD/OPNsense)
+			if err := os.MkdirAll(logDir, 0755); err != nil {
+				return fmt.Errorf("failed to ensure log directory exists: %w", err)
 			}
-
-			// Write syslog configuration
-			if err := os.WriteFile("/etc/syslog.d/dhcpsync.conf", syslogContent, 0644); err != nil {
-				return fmt.Errorf("failed to create syslog configuration: %w", err)
-			}
-
-			// Restart syslogd to pick up the new configuration
-			if err := exec.Command("service", "syslogd", "restart").Run(); err != nil {
-				fmt.Printf("Warning: failed to restart syslogd: %v\n", err)
-				fmt.Println("You may need to manually restart syslogd: service syslogd restart")
-			}
+			fmt.Printf("Log directory ready: %s\n", logDir)
 		}
 		if installDryRun {
 			fmt.Println("\n=== Dry Run Complete ===")

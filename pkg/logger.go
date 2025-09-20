@@ -169,6 +169,8 @@ func (l *DualLogger) Debug(msg string) {
 // getFacility converts a facility string to syslog.Priority
 func getFacility(facility string) syslog.Priority {
 	switch strings.ToLower(facility) {
+	case "daemon":
+		return syslog.LOG_DAEMON
 	case "local0":
 		return syslog.LOG_LOCAL0
 	case "local1":

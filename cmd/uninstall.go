@@ -155,18 +155,8 @@ This will:
 			return &cleanError{message: fmt.Sprintf("failed to remove binary: %v", err)}
 		}
 
-		// Remove syslog configuration
-		fmt.Println("Removing syslog configuration...")
-		if err := os.Remove(SyslogPath); err != nil && !os.IsNotExist(err) && !forceful {
-			return &cleanError{message: fmt.Sprintf("failed to remove syslog configuration: %v", err)}
-		}
-
-		// Restart syslogd to remove the configuration
-		fmt.Println("Restarting syslogd...")
-		if err := exec.Command("service", "syslogd", "restart").Run(); err != nil {
-			fmt.Printf("Warning: failed to restart syslogd: %v\n", err)
-			fmt.Println("You may need to manually restart syslogd: service syslogd restart")
-		}
+		// Log file cleanup (optional - leave log file by default)
+		fmt.Println("Note: Log file /var/log/dhcpsync.log left in place for review")
 
 		// Optionally remove config directory
 		if removeConfig {

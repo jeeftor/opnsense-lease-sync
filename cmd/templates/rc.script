@@ -21,7 +21,6 @@ load_rc_config $name
 
 pidfile="/var/run/${name}.pid"
 command="/usr/sbin/daemon"
-command_args="-P ${pidfile} -r -f -u ${dhcpsync_user} ${dhcpsync_command} serve --bsd"
 
 # Source the config file to get environment variables.
 # This block runs every time the script is called.
@@ -30,5 +29,14 @@ if [ -f "${dhcpsync_config}" ]; then
     . "${dhcpsync_config}"
     set +a
 fi
+
+# Use --log-file flag to specify log location and pass credentials from config
+command_args="-P ${pidfile} -r -f -u ${dhcpsync_user} ${dhcpsync_command} serve --bsd --log-file /var/log/dhcpsync.log --username ${ADGUARD_USERNAME} --password ${ADGUARD_PASSWORD}"
+
+# Debug: write the full command to a file (commented out)
+#echo "Full command: ${command} ${command_args}" > /tmp/dhcpsync_cmd.txt
+#echo "Environment variables:" >> /tmp/dhcpsync_cmd.txt
+#echo "ADGUARD_USERNAME=${ADGUARD_USERNAME}" >> /tmp/dhcpsync_cmd.txt
+#echo "ADGUARD_PASSWORD=${ADGUARD_PASSWORD}" >> /tmp/dhcpsync_cmd.txt
 
 run_rc_command "$1"

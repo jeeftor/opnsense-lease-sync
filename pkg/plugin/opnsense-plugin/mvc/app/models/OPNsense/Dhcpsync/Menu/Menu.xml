@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <menu>
     <Services>
-        <dhcpsync VisibleName="DHCP AdGuard Sync" cssClass="fa fa-refresh fa-fw" order="0">
+        <dhcpsync VisibleName="DHCP AdGuard Sync" cssClass="fa fa-refresh fa-fw">
             <General url="/ui/dhcpsync/general/index" order="10"/>
             <LogFile url="/ui/diagnostics/log/core/dhcpsync" order="20" VisibleName="Log File" />
         </dhcpsync>
